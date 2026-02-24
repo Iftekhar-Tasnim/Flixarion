@@ -4,7 +4,7 @@
 
 ## User Journeys
 
-1. Start → Explore homepage (all content loads, frontend filters trending/popular/recent) → Scroll through listings → Use filters (type/genre/year) on frontend → Search content → Choose a movie → View movie details & available sources → Select a source → Play content (direct FTP stream) → Download content (optional) → Close player → End.
+1. Start → Frontend pings all FTP sources (Race Strategy) → Determines reachable sources (e.g. Dflix, FTPBD) → Sends reachable source IDs to API → Homepage loads ONLY content available on user's reachable sources → Scroll through listings → Use filters (type/genre/year) → Search content → Choose a movie → View movie details & available sources → Select a source → Play content (direct FTP stream) → Close player → End.
 
 2. Start → Explore homepage → Browse TV series listings → Choose a TV series → View seasons & episodes (all loaded in one call) → Select a season → Select an episode → View episode sources → Play episode → Click "Next Episode" → Continue playback → Close player → End.
 
@@ -14,7 +14,7 @@
 
 5. Start → Login → Search for a movie → Choose a movie → Add to watchlist → Add to favorites → Play movie (history auto-recorded) → Close player → View recently watched → Remove from watchlist → Remove from favorites → Logout → End.
 
-6. Start → App loads → Frontend pings all BDIX sources (Race Strategy) → Send anonymous health report to backend (ISP name + reachability, no IPs) → Frontend filters content by reachable sources → End.
+6. Start → App loads → Frontend pings all BDIX sources (Race Strategy) → Determines which sources are reachable → Sends reachable source IDs as ?sources=1,3,7 to API calls → Send anonymous health report to backend (ISP name + reachability, no IPs) → Content is filtered server-side by reachable sources → End.
 
 7. Start → Play content → Source fails (404) → Backend triggers silent re-scan → Auto-switch to next available source → Playback resumes → Continue watching → End.
 
@@ -49,7 +49,7 @@ Authentication (/api/auth)
 
 Contents (/api/contents) — Public
 
-5. GET /contents – All content (paginated). Frontend filters by type/genre/year/trending/popular/recent. Params: ?page=&per_page=&type=&genre=&year=&available_only=true
+5. GET /contents – Content from user's reachable sources (paginated). Params: ?sources=1,3&page=&per_page=&type=&genre=&year=&sort=trending|popular|recent
 
 6. GET /contents/search?q= – Search by title (dual TMDb + alternative titles). Returns merged results
 

@@ -423,6 +423,37 @@
                     }
                 },
                 {
+                    "name": "Browse by Reachable Sources",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/contents?sources=1,3&sort=trending",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "contents"
+                            ],
+                            "query": [
+                                {
+                                    "key": "sources",
+                                    "value": "1,3"
+                                },
+                                {
+                                    "key": "sort",
+                                    "value": "trending"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
                     "name": "Filter by Type (movie)",
                     "request": {
                         "method": "GET",
@@ -563,13 +594,24 @@
                     "request": {
                         "method": "GET",
                         "header": [
-                            { "key": "Accept", "value": "application/json" },
-                            { "key": "Authorization", "value": "Bearer {{token}}" }
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
                         ],
                         "url": {
                             "raw": "{{base_url}}/user/library",
-                            "host": ["{{base_url}}"],
-                            "path": ["user", "library"]
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "user",
+                                "library"
+                            ]
                         }
                     }
                 },
@@ -578,13 +620,24 @@
                     "request": {
                         "method": "GET",
                         "header": [
-                            { "key": "Accept", "value": "application/json" },
-                            { "key": "Authorization", "value": "Bearer {{token}}" }
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
                         ],
                         "url": {
                             "raw": "{{base_url}}/user/watchlist",
-                            "host": ["{{base_url}}"],
-                            "path": ["user", "watchlist"]
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "user",
+                                "watchlist"
+                            ]
                         }
                     }
                 },
@@ -593,15 +646,32 @@
                     "request": {
                         "method": "POST",
                         "header": [
-                            { "key": "Accept", "value": "application/json" },
-                            { "key": "Content-Type", "value": "application/json" },
-                            { "key": "Authorization", "value": "Bearer {{token}}" }
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
                         ],
-                        "body": { "mode": "raw", "raw": "{\n    \"content_id\": 1\n}" },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"content_id\": 1\n}"
+                        },
                         "url": {
                             "raw": "{{base_url}}/user/watchlist",
-                            "host": ["{{base_url}}"],
-                            "path": ["user", "watchlist"]
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "user",
+                                "watchlist"
+                            ]
                         }
                     }
                 },
@@ -610,13 +680,25 @@
                     "request": {
                         "method": "DELETE",
                         "header": [
-                            { "key": "Accept", "value": "application/json" },
-                            { "key": "Authorization", "value": "Bearer {{token}}" }
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
                         ],
                         "url": {
                             "raw": "{{base_url}}/user/watchlist/1",
-                            "host": ["{{base_url}}"],
-                            "path": ["user", "watchlist", "1"]
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "user",
+                                "watchlist",
+                                "1"
+                            ]
                         }
                     }
                 },
@@ -625,13 +707,24 @@
                     "request": {
                         "method": "GET",
                         "header": [
-                            { "key": "Accept", "value": "application/json" },
-                            { "key": "Authorization", "value": "Bearer {{token}}" }
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
                         ],
                         "url": {
                             "raw": "{{base_url}}/user/favorites",
-                            "host": ["{{base_url}}"],
-                            "path": ["user", "favorites"]
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "user",
+                                "favorites"
+                            ]
                         }
                     }
                 },
@@ -640,15 +733,32 @@
                     "request": {
                         "method": "POST",
                         "header": [
-                            { "key": "Accept", "value": "application/json" },
-                            { "key": "Content-Type", "value": "application/json" },
-                            { "key": "Authorization", "value": "Bearer {{token}}" }
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
                         ],
-                        "body": { "mode": "raw", "raw": "{\n    \"content_id\": 1\n}" },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"content_id\": 1\n}"
+                        },
                         "url": {
                             "raw": "{{base_url}}/user/favorites",
-                            "host": ["{{base_url}}"],
-                            "path": ["user", "favorites"]
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "user",
+                                "favorites"
+                            ]
                         }
                     }
                 },
@@ -657,13 +767,25 @@
                     "request": {
                         "method": "DELETE",
                         "header": [
-                            { "key": "Accept", "value": "application/json" },
-                            { "key": "Authorization", "value": "Bearer {{token}}" }
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
                         ],
                         "url": {
                             "raw": "{{base_url}}/user/favorites/1",
-                            "host": ["{{base_url}}"],
-                            "path": ["user", "favorites", "1"]
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "user",
+                                "favorites",
+                                "1"
+                            ]
                         }
                     }
                 },
@@ -672,15 +794,32 @@
                     "request": {
                         "method": "POST",
                         "header": [
-                            { "key": "Accept", "value": "application/json" },
-                            { "key": "Content-Type", "value": "application/json" },
-                            { "key": "Authorization", "value": "Bearer {{token}}" }
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
                         ],
-                        "body": { "mode": "raw", "raw": "{\n    \"content_id\": 1\n}" },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"content_id\": 1\n}"
+                        },
                         "url": {
                             "raw": "{{base_url}}/user/history",
-                            "host": ["{{base_url}}"],
-                            "path": ["user", "history"]
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "user",
+                                "history"
+                            ]
                         }
                     }
                 },
@@ -689,13 +828,24 @@
                     "request": {
                         "method": "GET",
                         "header": [
-                            { "key": "Accept", "value": "application/json" },
-                            { "key": "Authorization", "value": "Bearer {{token}}" }
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
                         ],
                         "url": {
                             "raw": "{{base_url}}/user/history",
-                            "host": ["{{base_url}}"],
-                            "path": ["user", "history"]
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "user",
+                                "history"
+                            ]
                         }
                     }
                 }

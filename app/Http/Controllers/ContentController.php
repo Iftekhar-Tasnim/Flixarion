@@ -36,10 +36,13 @@ class ContentController extends Controller
             $query->where('year', $request->input('year'));
         }
 
-        // ── Available Only (Story #10) ──
-        if ($request->boolean('available_only')) {
-            $query->whereHas('sourceLinks', function ($q) {
-                $q->where('status', 'active');
+        // ── Filter by reachable sources (Story #10 — personalized) ──
+        // Frontend Race Strategy pings all sources, sends reachable IDs: ?sources=1,3,7
+        if ($request->filled('sources')) {
+            $sourceIds = array_map('intval', explode(',', $request->input('sources')));
+            $query->whereHas('sourceLinks', function ($q) use ($sourceIds) {
+                $q->where('status', 'active')
+                    ->whereIn('source_id', $sourceIds);
             });
         }
 
