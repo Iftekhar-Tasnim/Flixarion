@@ -1,2 +1,8 @@
 User-agent: *
-Disallow:
+Disallow: /play/
+Disallow: /source/
+Disallow: /api/admin/
+Allow: /api/contents/
+Allow: /api/auth/
+
+Sitemap: https://flixarion.com/sitemap.xml

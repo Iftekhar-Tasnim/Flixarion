@@ -21,17 +21,17 @@
 
 ---
 
-## Epic: Content Browsing & Search — 0/7
+## Epic: Content Browsing & Search — 7/7 ✅
 
 | # | Story | Priority | Status |
 |---|-------|----------|--------|
-| 5 | Paginated content list (20/page) | Critical | ⬜ |
-| 6 | Filter by type, genre, year | High | ⬜ |
-| 7 | Search by title + alternative titles | Critical | ⬜ |
-| 8 | Trending, popular, recently added endpoints | High | ⬜ |
-| 9 | Content detail with metadata + sources | Critical | ⬜ |
-| 10 | Filter by user's accessible sources | Moderate | ⬜ |
-| 11 | robots.txt blocks /play/ and /source/ | High | ⬜ |
+| 5 | Paginated content list (20/page) | Critical | ✅ |
+| 6 | Filter by type, genre, year | High | ✅ |
+| 7 | Search by title + alternative titles | Critical | ✅ |
+| 8 | Trending, popular, recently added endpoints | High | ✅ |
+| 9 | Content detail with metadata + sources | Critical | ✅ |
+| 10 | Filter by user's accessible sources | Moderate | ✅ |
+| 11 | robots.txt blocks /play/ and /source/ | High | ✅ |
 
 ---
 
@@ -44,15 +44,15 @@
 
 ---
 
-## Epic: User Library — 0/6
+## Epic: User Library — 5/6 ✅
 
 | # | Story | Priority | Status |
 |---|-------|----------|--------|
-| 14 | Add/remove watchlist | Critical | ⬜ |
-| 15 | Add/remove favorites | Critical | ⬜ |
-| 16 | Trigger-only watch history | Critical | ⬜ |
-| 17 | Cache last 10 watched items | High | ⬜ |
-| 18 | View full watch history | High | ⬜ |
+| 14 | Add/remove watchlist | Critical | ✅ |
+| 15 | Add/remove favorites | Critical | ✅ |
+| 16 | Trigger-only watch history | Critical | ✅ |
+| 17 | Cache last 10 watched items | High | ✅ |
+| 18 | View full watch history | High | ✅ |
 | 19 | Rate & review (Post-MVP) | Low | ⬜ |
 
 ---
@@ -200,6 +200,6 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ Done | **10** |
-| ⬜ Not Started | **71** |
+| ✅ Done | **22** |
+| ⬜ Not Started | **59** |
 | **Total** | **81** |
