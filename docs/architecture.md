@@ -1,13 +1,16 @@
-# BDFlix — System Architecture
+# Flixarion — System Architecture
+
+> **SCOPE NOTE: This repository (Flixarion) is strictly the Laravel Backend API. All Frontend (Next.js) and Admin Panel (Vue.js) components have been moved to separate repositories and their implementation scope is excluded from this codebase.**
+
 
 **Version**: 2.0 · **Date**: 2026-02-18 · **Author**: Iftekhar Tasnim  
-**Reference**: [BRD](file:///Volumes/WD%20M.2/BluBird/BDFlix/docs/BRD.md) | [SRS](file:///Volumes/WD%20M.2/BluBird/BDFlix/docs/SRS.md)
+**Reference**: [BRD](file:///Volumes/WD%20M.2/BluBird/Flixarion/docs/BRD.md) | [SRS](file:///Volumes/WD%20M.2/BluBird/Flixarion/docs/SRS.md)
 
 ---
 
 ## 1. High-Level Overview
 
-Three independently deployable components communicating via REST API.
+The ecosystem has three independently deployable components (this repository contains ONLY the Laravel REST API).
 
 ```mermaid
 graph TB
@@ -24,7 +27,7 @@ graph TB
     end
 
     subgraph "Application"
-        API["Laravel 11 API :8000"]
+        API["Laravel 12 API :8000"]
         COL["Phase 1: Collector<br/>(Fast File Indexing)"]
         ENR["Phase 2: Enricher<br/>(Rate-Limited Metadata)"]
         SCHED["Scheduler (Cron)"]
@@ -70,7 +73,7 @@ graph TB
 
 ---
 
-## 2. Backend (Laravel 11)
+## 2. Backend (Laravel 12)
 
 ### Layer Structure
 
@@ -80,7 +83,7 @@ graph TB
 | **Services** | MetadataService, CollectorService, EnricherService, MatchingService | Business logic |
 | **Scrapers** | `BaseScraperInterface` → 6 source-specific scrapers | Pluggable data fetching |
 | **Workers** | CollectorJob, EnricherJob, HealthAggregatorJob | Background processing |
-| **Models** | 15+ Eloquent models | Data access & relationships |
+| **Models** | 18 Eloquent models | Data access & relationships |
 
 ### Scraper Plugin Architecture
 
@@ -255,18 +258,18 @@ erDiagram
     users ||--o{ watch_history : has
     users ||--o{ watchlists : has
     users ||--o{ favorites : has
-    users ||--o{ user_sources : has
 
     contents ||--o{ seasons : has
     seasons ||--o{ episodes : has
-    contents ||--o{ content_sources : has
-    episodes ||--o{ episode_sources : has
+    contents ||--o{ source_links : has
+    episodes ||--o{ source_links : has
+    contents ||--o{ content_genre : has
+    genres ||--o{ content_genre : has
     contents ||--o{ watch_history : tracks
     contents ||--o{ watchlists : in
     contents ||--o{ favorites : in
 
-    sources ||--o{ content_sources : provides
-    sources ||--o{ episode_sources : provides
+    sources ||--o{ source_links : provides
     sources ||--o{ source_scan_logs : logs
     sources ||--o{ source_health_reports : receives
 
@@ -275,19 +278,30 @@ erDiagram
         int tmdb_id UK
         string type
         string title
-        jsonb metadata
+        string enrichment_status
         jsonb alternative_titles
         float confidence_score
     }
 
-    content_sources {
-        int content_id FK
+    source_links {
+        int id PK
+        string linkable_type
+        int linkable_id
         int source_id FK
         string file_path
         string quality
-        int file_size
-        string codec_info
-        jsonb subtitle_paths
+        string status
+    }
+
+    genres {
+        int id PK
+        string name UK
+        string slug UK
+    }
+
+    content_genre {
+        int content_id FK
+        int genre_id FK
     }
 
     source_health_reports {
@@ -328,7 +342,7 @@ erDiagram
 | **Transport** | TLS/SSL | Nginx + Let's Encrypt |
 | **API Gateway** | CORS | Only frontend + admin origins |
 | **API Gateway** | Rate limiting | 60 req/min per IP |
-| **Auth** | JWT | Short-lived access + refresh tokens |
+| **Auth** | Sanctum | Non-expiring API tokens (revoked on logout) |
 | **Auth** | Role-based access | Admin middleware → `role === 'admin'` |
 | **Input** | Validation | Laravel FormRequests on every endpoint |
 | **Data** | SQL injection prevention | Eloquent ORM, parameterized queries |
@@ -370,9 +384,9 @@ graph TB
 
 | Domain | Target |
 |--------|--------|
-| `bdflix.com` | Next.js Frontend |
-| `api.bdflix.com` | Laravel API |
-| `admin.bdflix.com` | Vue.js Admin Panel |
+| `flixarion.com` | Next.js Frontend |
+| `api.flixarion.com` | Laravel API |
+| `admin.flixarion.com` | Vue.js Admin Panel |
 
 ### 8.3 Process Management
 
@@ -405,14 +419,14 @@ graph TB
 
 | Layer | Technology |
 |-------|-----------|
-| **Backend** | Laravel 11 · PHP 8.2+ · JWT Auth · Eloquent ORM |
+| **Backend** | Laravel 12 · PHP 8.2+ · Sanctum Auth · Eloquent ORM |
 | **Frontend** | Next.js 14 · React 18 · TypeScript · Plyr.js + hls.js · Service Worker |
 | **Admin** | Vue.js 3 · Composition API · Pinia · Vue Router |
-| **Database** | PostgreSQL 15+ · JSONB fields · 15+ tables |
+| **Database** | PostgreSQL 15+ · JSONB fields · 18 tables |
 | **Cache/Queue** | Redis 7+ · Data cache · Job queue · Rate limiting |
 | **Infrastructure** | Nginx · Supervisor · PM2 · SSL/TLS |
 | **External** | TMDb API · OMDb API · Image Proxy (wsrv.nl) · BDIX FTP Sources |
 
 ---
 
-**Document Version**: 2.0 · **Project Name**: BDFlix · **Last Updated**: 2026-02-18
+**Document Version**: 2.0 · **Project Name**: Flixarion · **Last Updated**: 2026-02-18

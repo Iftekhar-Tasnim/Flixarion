@@ -1,4 +1,7 @@
-# BDFlix — Business Requirements Document (BRD)
+# Flixarion — Business Requirements Document (BRD)
+
+> **SCOPE NOTE: This repository (Flixarion) is strictly the Laravel Backend API. All Frontend (Next.js) and Admin Panel (Vue.js) components have been moved to separate repositories and their implementation scope is excluded from this codebase.**
+
 
 **Version**: 1.0  
 **Date**: 2026-02-17  
@@ -9,7 +12,7 @@
 
 ## 1. Executive Summary
 
-BDFlix is a free, open-access movie and TV series streaming platform designed for Bangladesh users connected to BDIX (Bangladesh Internet Exchange) networks. The platform aggregates content from multiple BDIX FTP servers — which are legally and freely accessible through local ISPs — and presents them through a modern, Netflix-like interface with rich metadata, search, and personalization features.
+Flixarion is a free, open-access movie and TV series streaming platform designed for Bangladesh users connected to BDIX (Bangladesh Internet Exchange) networks. The platform aggregates content from multiple BDIX FTP servers — which are legally and freely accessible through local ISPs — and presents them through a modern, Netflix-like interface with rich metadata, search, and personalization features.
 
 This is a solo community-service and portfolio project with no monetization plans.
 
@@ -32,7 +35,7 @@ This is a solo community-service and portfolio project with no monetization plan
 |-------------|------|-----------------|
 | **Iftekhar Tasnim** | Project Owner, Solo Developer | All design, development, deployment, and maintenance |
 | **End Users** | BDIX-connected viewers in Bangladesh | Consume content, provide feedback |
-| **BDIX FTP Server Operators** | Content source providers | Operate and maintain FTP servers (external, not managed by BDFlix) |
+| **BDIX FTP Server Operators** | Content source providers | Operate and maintain FTP servers (external, not managed by Flixarion) |
 | **TMDb / OMDb** | Metadata providers | Supply movie/series metadata via public APIs |
 
 ---
@@ -91,7 +94,7 @@ This is a solo community-service and portfolio project with no monetization plan
 | Monetization / ads | Free platform, no revenue model planned |
 | Mobile apps (iOS/Android) | Post-launch enhancement |
 | User-generated content | Platform is a content aggregator, not a hosting service |
-| Content hosting / storage | BDFlix does not host any content — streams directly from FTP |
+| Content hosting / storage | Flixarion does not host any content — streams directly from FTP |
 | Live streaming | Only pre-recorded content (movies/series) |
 | Social features | Sharing, comments, watch parties — future enhancements |
 | Ratings & reviews | Post-MVP feature |
@@ -261,7 +264,7 @@ This is a solo community-service and portfolio project with no monetization plan
 | 2 | Only registered users can save watchlists, favorites, and watch history |
 | 3 | Registration requires a valid email and password |
 | 4 | Admin role is manually assigned — no self-registration for admin access |
-| 5 | Content is never hosted by BDFlix — all streaming is direct from BDIX FTP servers |
+| 5 | Content is never hosted by Flixarion — all streaming is direct from BDIX FTP servers |
 | 6 | If a source becomes unreachable, its health score decreases; if it drops below threshold, it is auto-disabled |
 | 7 | Content metadata is synced from TMDb as primary source; OMDb is used as a fallback only when TMDb returns no results |
 | 8 | Automated scans run every 6 hours; admin can trigger manual scans at any time |
@@ -524,6 +527,6 @@ This is a solo community-service and portfolio project with no monetization plan
 ---
 
 **Document Version**: 1.0  
-**Project Name**: BDFlix  
+**Project Name**: Flixarion  
 **Approved By**: *Pending*  
 **Date**: 2026-02-17

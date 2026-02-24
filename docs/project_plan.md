@@ -1,4 +1,7 @@
-# BDFlix — Project Master Plan
+# Flixarion — Project Master Plan
+
+> **SCOPE NOTE: This repository (Flixarion) is strictly the Laravel Backend API. All Frontend (Next.js) and Admin Panel (Vue.js) components have been moved to separate repositories and their implementation scope is excluded from this codebase.**
+
 
 > **A full-stack movie & TV series streaming platform aggregating content from Bangladesh BDIX FTP servers, delivering a Netflix-like experience.**
 
@@ -10,7 +13,7 @@
 
 ## 1. Project Overview
 
-**BDFlix** is a modern, full-stack streaming platform built specifically for Bangladesh users connected to BDIX (Bangladesh Internet Exchange). The platform aggregates movie and TV series content from multiple BDIX FTP servers, enriches them with rich metadata from TMDb/OMDb, and delivers a premium Netflix-like browsing and streaming experience.
+**Flixarion** is a modern, full-stack streaming platform built specifically for Bangladesh users connected to BDIX (Bangladesh Internet Exchange). The platform aggregates movie and TV series content from multiple BDIX FTP servers, enriches them with rich metadata from TMDb/OMDb, and delivers a premium Netflix-like browsing and streaming experience.
 
 ### Core Value Proposition
 
@@ -26,7 +29,7 @@
 
 | Layer | Technology | Version | Purpose |
 |-------|-----------|---------|---------|
-| **Backend API** | Laravel | 11.x | REST API, queue jobs, scanning |
+| **Backend API** | Laravel | 12.x | REST API, queue jobs, scanning |
 | **Frontend** | Next.js | 14.x (App Router) | User-facing streaming UI |
 | **Admin Panel** | Vue.js | 3.x (Composition API) | Admin dashboard & management |
 | **Database** | PostgreSQL | 15+ | Primary data store |
@@ -176,7 +179,7 @@ Content-Type: application/json
 **Step 1: Authenticate**
 ```http
 POST https://play.roarzone.info/emby/Users/AuthenticateByName
-X-Emby-Authorization: MediaBrowser Client="BDFlix", Device="Scanner", DeviceId="bdflix-001", Version="1.0.0"
+X-Emby-Authorization: MediaBrowser Client="Flixarion", Device="Scanner", DeviceId="flixarion-001", Version="1.0.0"
 Content-Type: application/json
 
 { "Username": "RoarZone_Guest", "Pw": "" }
@@ -327,6 +330,10 @@ Example: "1080p BluRay Dolby Atmos" = (3×10) + 18 + 8 = 56
 
 ## 6. Database Schema
 
+> Full schema details in [database_architecture.md](file:///Volumes/WD%20M.2/BluBird/Flixarion/docs/database_architecture.md). This section provides a summary.
+
+**18 tables** across 6 domains: Users & Auth, Content, Sources & Scanning, User Activity, Health Monitoring, System.
+
 ### 6.1 Entity Relationship
 
 ```mermaid
@@ -336,237 +343,61 @@ erDiagram
     users ||--o{ favorites : has
     users ||--o{ ratings : creates
     users ||--o{ reviews : writes
-    users ||--o{ user_sources : configures
-    
+    users ||--o{ personal_access_tokens : authenticates
+
+    contents ||--o{ seasons : has
+    seasons ||--o{ episodes : contains
+    contents ||--o{ source_links : available_at
+    episodes ||--o{ source_links : available_at
+    contents ||--o{ content_genre : categorized_by
+    genres ||--o{ content_genre : categorizes
     contents ||--o{ watch_history : tracked
     contents ||--o{ watchlists : added_to
     contents ||--o{ favorites : marked_as
-    contents ||--o{ seasons : has
-    contents ||--o{ content_sources : available_on
     contents ||--o{ ratings : receives
     contents ||--o{ reviews : has
-    
-    seasons ||--o{ episodes : contains
-    episodes ||--o{ episode_sources : available_on
-    
-    sources ||--o{ content_sources : provides
-    sources ||--o{ episode_sources : provides
+
+    sources ||--o{ source_links : provides
     sources ||--o{ source_scan_logs : logs
-    sources ||--o{ user_sources : tested_by
-    sources ||--o{ source_usage_logs : tracked_by
+    sources ||--o{ source_health_reports : monitored
 ```
 
-### 6.2 Table Definitions
+### 6.2 Table Summary
 
-#### `users`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| name | VARCHAR | NOT NULL |
-| email | VARCHAR | UNIQUE, NOT NULL |
-| password | VARCHAR | NOT NULL |
-| email_verified_at | TIMESTAMP | NULLABLE |
-| role | VARCHAR | DEFAULT 'user' (user / admin) |
-| created_at | TIMESTAMP | |
-| updated_at | TIMESTAMP | |
+| # | Table | Key Columns | Notes |
+|---|-------|-------------|-------|
+| 1 | `users` | id, name, email, password, role, is_banned | Sanctum auth. Recently watched cached in Redis, not DB |
+| 2 | `personal_access_tokens` | tokenable_id, token, expires_at | Sanctum managed. Non-expiring, revoked on logout |
+| 3 | `contents` | tmdb_id (UK), type, title, year, rating, enrichment_status, confidence_score, is_published, is_featured, cast (JSONB), alternative_titles (JSONB) | Deduped by tmdb_id |
+| 4 | `genres` | name (UK), slug (UK), tmdb_id | ~20 rows, seeded |
+| 5 | `content_genre` | content_id (FK), genre_id (FK) | Composite PK, no id column |
+| 6 | `seasons` | content_id (FK), season_number, tmdb_season_id | UNIQUE(content_id, season_number) |
+| 7 | `episodes` | season_id (FK), content_id (FK), episode_number, tmdb_episode_id | UNIQUE(season_id, episode_number) |
+| 8 | `sources` | name (UK), base_url, scraper_type, config (JSONB), is_active, health_score, priority | BDIX server definitions |
+| 9 | `source_links` | linkable_type, linkable_id, source_id (FK), file_path, quality, codec_info, subtitle_paths (JSONB), status | Polymorphic: 'content' or 'episode' |
+| 10 | `shadow_content_sources` | source_id, raw_filename, file_path, file_extension, scan_batch_id | Temp table for Phase 1 scans |
+| 11 | `source_scan_logs` | source_id (FK), phase, status, items_found, items_matched, items_failed | 90-day retention |
+| 12 | `watchlists` | user_id (FK), content_id (FK) | UNIQUE(user_id, content_id) |
+| 13 | `favorites` | user_id (FK), content_id (FK) | UNIQUE(user_id, content_id) |
+| 14 | `watch_history` | user_id (FK), content_id (FK), episode_id (FK nullable), is_completed, played_at | Trigger-only, no playback position |
+| 15 | `ratings` | user_id (FK), content_id (FK), score (1–10) | Post-MVP |
+| 16 | `reviews` | user_id (FK), content_id (FK), body | Post-MVP |
+| 17 | `source_health_reports` | source_id (FK), isp_name, is_reachable, response_time_ms, reported_at | 30-day rolling window, no IPs |
+| 18 | `settings` | key (UK), value | Admin-editable config |
 
-#### `contents`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| imdb_id | VARCHAR | UNIQUE |
-| tmdb_id | VARCHAR | |
-| type | VARCHAR | NOT NULL (movie / series) |
-| title | VARCHAR | NOT NULL |
-| description | TEXT | |
-| poster_url | VARCHAR | |
-| backdrop_url | VARCHAR | |
-| year | INTEGER | |
-| genres | VARCHAR[] | PostgreSQL array |
-| rating | DECIMAL | |
-| runtime | INTEGER | minutes |
-| status | VARCHAR | |
-| trailer_url | TEXT | YouTube URL |
-| metadata | JSONB | cast, director, etc. |
-| last_metadata_sync | TIMESTAMP | |
-| created_at | TIMESTAMP | |
-| updated_at | TIMESTAMP | |
+### 6.3 Key Design Decisions
 
-**Indexes:** `type`, `year`, `rating`, `imdb_id`
-
-#### `seasons`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| content_id | BIGINT | FK → contents |
-| season_number | INTEGER | NOT NULL |
-| title | VARCHAR | |
-| overview | TEXT | |
-| poster_url | VARCHAR | |
-| episode_count | INTEGER | |
-| created_at | TIMESTAMP | |
-| updated_at | TIMESTAMP | |
-
-#### `episodes`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| season_id | BIGINT | FK → seasons |
-| episode_number | INTEGER | NOT NULL |
-| title | VARCHAR | |
-| overview | TEXT | |
-| still_url | VARCHAR | |
-| runtime | INTEGER | minutes |
-| air_date | DATE | |
-| created_at | TIMESTAMP | |
-| updated_at | TIMESTAMP | |
-
-#### `sources`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| name | VARCHAR | UNIQUE, NOT NULL |
-| type | VARCHAR | (emby / json_api / http_scraper / rest_api / ajax) |
-| config | JSONB | URL, credentials, paths |
-| is_active | BOOLEAN | DEFAULT true |
-| priority | INTEGER | For source ranking |
-| health_score | INTEGER | 0–100 |
-| test_url | VARCHAR | For client-side availability testing |
-| requires_bdix | BOOLEAN | DEFAULT true |
-| available_isps | JSONB | DEFAULT '[]' |
-| last_health_check | TIMESTAMP | |
-| created_at | TIMESTAMP | |
-| updated_at | TIMESTAMP | |
-
-#### `content_sources`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| content_id | BIGINT | FK → contents |
-| source_id | BIGINT | FK → sources |
-| url | VARCHAR | Direct stream/download URL |
-| quality | VARCHAR | 480p / 720p / 1080p / 2160p |
-| file_size | BIGINT | Bytes |
-| codec | VARCHAR | x264, x265, etc. |
-| metadata | JSONB | Extra: source_type, audio, etc. |
-| last_verified | TIMESTAMP | |
-| is_available | BOOLEAN | DEFAULT true |
-| created_at | TIMESTAMP | |
-| updated_at | TIMESTAMP | |
-
-#### `episode_sources`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| episode_id | BIGINT | FK → episodes |
-| source_id | BIGINT | FK → sources |
-| url | VARCHAR | |
-| quality | VARCHAR | |
-| file_size | BIGINT | |
-| metadata | JSONB | |
-| last_verified | TIMESTAMP | |
-| is_available | BOOLEAN | DEFAULT true |
-| created_at | TIMESTAMP | |
-| updated_at | TIMESTAMP | |
-
-#### `watch_history`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| user_id | BIGINT | FK → users |
-| content_id | BIGINT | FK → contents |
-| episode_id | BIGINT | FK → episodes, NULLABLE |
-| progress_seconds | INTEGER | Current position |
-| duration_seconds | INTEGER | Total length |
-| completed | BOOLEAN | true if progress > 90% |
-| last_watched_at | TIMESTAMP | |
-| created_at | TIMESTAMP | |
-| updated_at | TIMESTAMP | |
-
-#### `watchlists`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| user_id | BIGINT | FK → users |
-| content_id | BIGINT | FK → contents |
-| created_at | TIMESTAMP | |
-
-**Unique constraint:** `(user_id, content_id)`
-
-#### `favorites`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| user_id | BIGINT | FK → users |
-| content_id | BIGINT | FK → contents |
-| created_at | TIMESTAMP | |
-
-**Unique constraint:** `(user_id, content_id)`
-
-#### `ratings`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| user_id | BIGINT | FK → users |
-| content_id | BIGINT | FK → contents |
-| rating | INTEGER | 1–10 |
-| created_at | TIMESTAMP | |
-| updated_at | TIMESTAMP | |
-
-**Unique constraint:** `(user_id, content_id)`
-
-#### `reviews`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| user_id | BIGINT | FK → users |
-| content_id | BIGINT | FK → contents |
-| review | TEXT | NOT NULL |
-| likes | INTEGER | DEFAULT 0 |
-| dislikes | INTEGER | DEFAULT 0 |
-| created_at | TIMESTAMP | |
-| updated_at | TIMESTAMP | |
-
-#### `source_scan_logs`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| source_id | BIGINT | FK → sources |
-| status | VARCHAR | pending / running / completed / failed |
-| items_found | INTEGER | |
-| items_matched | INTEGER | |
-| error_message | TEXT | NULLABLE |
-| started_at | TIMESTAMP | |
-| completed_at | TIMESTAMP | |
-| created_at | TIMESTAMP | |
-
-#### `user_sources`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| user_id | BIGINT | FK → users |
-| source_id | BIGINT | FK → sources |
-| is_accessible | BOOLEAN | DEFAULT false |
-| ping_ms | INTEGER | NULLABLE |
-| last_tested_at | TIMESTAMP | |
-| auto_detected | BOOLEAN | DEFAULT true |
-| preferred | BOOLEAN | DEFAULT false |
-| created_at | TIMESTAMP | |
-| updated_at | TIMESTAMP | |
-
-**Unique constraint:** `(user_id, source_id)`  
-**Indexes:** `user_id`, `is_accessible`
-
-#### `source_usage_logs`
-| Column | Type | Constraints |
-|--------|------|-------------|
-| id | BIGSERIAL | PK |
-| user_id | BIGINT | FK → users |
-| source_id | BIGINT | FK → sources |
-| content_id | BIGINT | FK → contents |
-| started_at | TIMESTAMP | DEFAULT NOW() |
-| duration_seconds | INTEGER | |
-| completed | BOOLEAN | DEFAULT false |
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Content anchor | `tmdb_id` (not `imdb_id`) | Stable, prevents duplicates across sources |
+| Source links | Polymorphic `source_links` table | Single table for both movie and episode sources, eliminates duplication |
+| Genres | Normalized `genres` + `content_genre` pivot | Enables efficient backend-side filtering and aggregation |
+| Watch history | Trigger-only (no position) | Reduces DB writes and I/O under load |
+| Recently watched | JSON column on `users` (last 10) | Fast retrieval, no complex JOINs |
+| Scan strategy | Shadow table → batch sync | Prevents UI sluggishness during 6h scans |
+| Source health | Crowdsourced `source_health_reports` | Admin server can't reach BDIX IPs directly |
+| ISP detection | Client-side only (Service Worker) | No per-user source table needed on backend |
+| Content match | Confidence score (0–100%) | <80% flagged for review, not auto-published |
 
 ---
 
@@ -577,9 +408,8 @@ erDiagram
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/register` | User registration |
-| POST | `/login` | User login (returns JWT) |
-| POST | `/logout` | User logout |
-| POST | `/refresh` | Refresh JWT token |
+| POST | `/login` | User login (returns Sanctum token) |
+| POST | `/logout` | User logout (revokes token) |
 | GET | `/me` | Get authenticated user |
 
 ### 7.2 Content (`/api/contents`)
@@ -672,7 +502,7 @@ flowchart TD
     J -->|Not Found| L{Search OMDb API}
     L -->|Found| K
     L -->|Not Found| M[Log Unmatched Item]
-    K --> N[Create content_sources Record]
+    K --> N[Create source_links Record]
     N --> O[Update Redis Cache]
     O --> P[Update Scan Log + Health Score]
 ```
@@ -695,8 +525,8 @@ sequenceDiagram
         S-->>F: Success/Failure + Ping
     end
     
-    F->>B: POST /api/user/sources/test
-    B->>B: Save Results to user_sources
+    F->>B: POST /api/sources/health-report
+    B->>B: Save to source_health_reports (anonymous)
     B-->>F: Success
     F->>U: Show Results → Continue to Browse
 ```
@@ -782,7 +612,7 @@ flowchart TD
 ### Backend (Laravel)
 
 ```
-bdflix-api/
+flixarion-api/
 ├── app/
 │   ├── Console/Commands/
 │   │   ├── ScanAllSources.php
@@ -800,7 +630,7 @@ bdflix-api/
 │   │   │       └── AnalyticsController.php
 │   │   ├── Middleware/
 │   │   │   ├── AdminMiddleware.php
-│   │   │   └── JwtMiddleware.php
+│   │   │   └── SanctumMiddleware.php
 │   │   └── Requests/
 │   │       ├── LoginRequest.php
 │   │       ├── RegisterRequest.php
@@ -853,7 +683,7 @@ bdflix-api/
 ### Frontend (Next.js)
 
 ```
-bdflix-web/
+flixarion-web/
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/
@@ -887,7 +717,7 @@ bdflix-web/
 ### Admin Panel (Vue.js)
 
 ```
-bdflix-admin/
+flixarion-admin/
 ├── src/
 │   ├── views/
 │   │   ├── Dashboard.vue
@@ -953,9 +783,9 @@ bdflix-admin/
 ### Phase 1: Foundation (Weeks 1–2)
 
 **Backend:**
-- Set up Laravel 11 project + PostgreSQL + Redis
+- Set up Laravel 12 project + PostgreSQL + Redis
 - Create all database migrations
-- Set up JWT authentication + User model + auth endpoints
+- Set up Sanctum authentication + User model + auth endpoints
 
 **Frontend:**
 - Set up Next.js 14 project (App Router)
@@ -1104,7 +934,7 @@ bdflix-admin/
 | Content matching | Regex filename parsing | FTP servers have no structured metadata |
 | ISP detection | Client-side ping/image test | Must test from user's actual network |
 | Source fallback | Auto-switch on stream failure | Transparent UX when source goes down |
-| Authentication | JWT with refresh tokens | Stateless, scalable, mobile-ready |
+| Authentication | Sanctum with non-expiring tokens | Stateless, scalable, revoked on logout |
 | Caching | Redis with tag-based invalidation | Fast, supports selective cache bust |
 | Admin panel | Separate Vue.js app | Independent deploy, doesn't bloat user frontend |
 | Database | PostgreSQL with JSONB + arrays | Flexible metadata without extra tables |
@@ -1183,7 +1013,7 @@ bdflix-admin/
 
 ## 17. Security
 
-- **Auth**: JWT tokens with refresh, bcrypt password hashing, email verification
+- **Auth**: Sanctum non-expiring tokens (revoked on logout), bcrypt password hashing, email verification
 - **Authorization**: Role-based (User, Admin) with middleware protection on admin routes
 - **Validation**: Laravel Form Requests for all user inputs
 - **API**: Rate limiting, CORS configuration, API key protection for TMDb/OMDb
@@ -1203,7 +1033,7 @@ APP_URL=http://localhost:8000
 DB_CONNECTION=pgsql
 DB_HOST=127.0.0.1
 DB_PORT=5432
-DB_DATABASE=bdflix
+DB_DATABASE=flixarion
 DB_USERNAME=postgres
 DB_PASSWORD=
 
@@ -1216,7 +1046,7 @@ QUEUE_CONNECTION=redis
 TMDB_API_KEY=your_tmdb_key
 OMDB_API_KEY=your_omdb_key
 
-JWT_SECRET=your_jwt_secret
+Sanctum_SECRET=your_sanctum_secret
 
 FRONTEND_URL=http://localhost:3000
 ADMIN_URL=http://localhost:8080
@@ -1225,7 +1055,7 @@ ADMIN_URL=http://localhost:8080
 ### Next.js `.env.local`
 ```
 NEXT_PUBLIC_API_URL=http://localhost:8000/api
-NEXT_PUBLIC_SITE_NAME=BDFlix
+NEXT_PUBLIC_SITE_NAME=Flixarion
 ```
 
 ### Vue.js Admin `.env`
@@ -1252,6 +1082,6 @@ return [
 ---
 
 **Document Version**: 1.1  
-**Project Name**: BDFlix  
+**Project Name**: Flixarion  
 **Last Updated**: 2026-02-17  
 **Total Sections**: 18

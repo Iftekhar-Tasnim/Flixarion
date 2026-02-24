@@ -1,41 +1,57 @@
 # User Interaction Matrix
 
-| User Action | UI Screen | Endpoint Triggered | Method | Key Data / Logic |
-|---|---|---|---|---|
-| **Guest / Public** | | | | |
-| Explore Homepage | Home / Dashboard | /api/v1/contents/ | GET | Loads trending/recent listings. |
-| Apply Filters | Browse / Search | /api/v1/contents/ | GET | Pass query params: ?type=movie&genre=action. |
-| Search Content | Search Bar | /api/v1/contents/ | GET | Pass ?q=keyword (can combine with filters). |
-| View Movie Details | Content Detail | /api/v1/contents/{id} | GET | Fetches metadata, description, and rating. |
-| Select Source/Play | Media Player | /api/v1/contents/{id}/source | GET | Retrieves FTP links/streams for the player. |
-| Browse TV Seasons | Series Detail | /api/v1/contents/{id}/seasons | GET | Returns list of seasons and episodes. |
-| Source Fails (404) | Media Player | /api/v1/contents/{id}/source | GET | Logic: Frontend catches 404, triggers next source in array. |
-| **Authentication** | | | | |
-| Register | Register Page | /api/v1/register | POST | Body: name, email, password. Creates account & returns token. |
-| Login | Login Page | /api/v1/login | POST | Body: email, password. Returns auth token. |
-| View Profile | Profile Page | /api/v1/profile | GET | Returns current user info (name, email, avatar). |
-| Logout | Any (Header) | /api/v1/logout | POST | Invalidates token / clears session. |
-| **User Library** | | | | |
-| View Watchlist | Watchlist Page | /api/v1/user/watchlist | GET | Returns array of saved content items. |
-| Add to Watchlist | Content Detail | /api/v1/user/watchlist | POST | Body: content_id. Adds item to watchlist. |
-| Remove from Watchlist | Watchlist Page | /api/v1/user/watchlist/{content_id} | DELETE | Removes specific item from watchlist. |
-| View Favorites | Favorites Page | /api/v1/user/favorites | GET | Returns array of favorited content. |
-| Add to Favorites | Content Detail | /api/v1/user/favorites | POST | Body: content_id. Adds item to favorites. |
-| Remove from Favorites | Favorites Page | /api/v1/user/favorites/{content_id} | DELETE | Removes specific item from favorites. |
-| View Recently Watched | History Page | /api/v1/user/recently-watched | GET | Returns watch history sorted by last watched. |
-| **Admin — Users** | | | | |
-| View Dashboard | Admin Dashboard | /api/v1/admin/dashboard | GET | Returns user count, content count, source stats. |
-| List All Users | Admin Users | /api/v1/admin/users | GET | Returns paginated user list. |
-| View User Details | Admin User Detail | /api/v1/admin/users/{id} | GET | Returns full user profile + activity. |
-| Ban User | Admin User Detail | /api/v1/admin/users/{id}/ban | POST | Sets user status to banned. Blocks login. |
-| Unban User | Admin User Detail | /api/v1/admin/users/{id}/unban | POST | Restores user access. |
-| Reset User Password | Admin User Detail | /api/v1/admin/users/{id}/reset-password | POST | Generates temp password or sends reset link. |
-| **Admin — Sources** | | | | |
-| List All Sources | Admin Sources | /api/v1/sources | GET | Returns all FTP/BDIX sources with status. |
-| Add New Source | Admin Sources | /api/v1/sources | POST | Body: name, url, type. Creates new source entry. |
-| View Source Detail | Admin Source Detail | /api/v1/sources/{id} | GET | Returns source config, status, last scan time. |
-| Edit Source Config | Admin Source Detail | /api/v1/sources/{id} | PUT | Body: updated fields. Saves new config. |
-| Delete Source | Admin Source Detail | /api/v1/sources/{id} | DELETE | Removes source and its associated content links. |
-| Test Source Connection | Admin Source Detail | /api/v1/sources/{id}/test | POST | Pings source URL, returns connection status. |
-| Trigger Scan | Admin Sources | /api/v1/sources/scan | POST | Initiates content scan across active sources. |
-| View Scan Logs | Admin Logs | /api/v1/admin/sources/logs | GET | Returns scan history with errors and results. |
+| # | User Action | UI Screen | Endpoint | Method | Key Data / Logic | Controller@Method → How It Works |
+|---|-------------|-----------|----------|--------|------------------|----------------------------------|
+| | **Guest / Public** | | | | | |
+| 1 | Explore homepage | Home | /api/contents | GET | All content loaded. Frontend filters trending/popular/recent locally | ContentController@index() → Content::where('is_published', true)->with('sourceLinks')->paginate(20) → store in Redis (1hr TTL) → return {data, meta} |
+| 2 | Apply filters | Browse | /api/contents | GET | Params: ?type=movie&genre=action&year=2025. Backend-side filtering | ContentController@index() → same as #1, filters: ->where('type', $type)->where('year', $year)->whereHas('genres', fn($q) => $q->where('slug', $genre)) |
+| 3 | Search content | Search | /api/contents/search?q= | GET | Searches TMDb + alternative titles. Returns merged results | ContentController@search() → Content::where('title', 'ILIKE', "%{$q}%")->orWhereJsonContains('alternative_titles', $q)->paginate(20) → return matches |
+| 4 | View content detail | Detail | /api/contents/{id} | GET | Full metadata + seasons + episodes + all source links in one call | ContentController@show($id) → Content::with('seasons.episodes.sourceLinks', 'sourceLinks', 'genres')->findOrFail($id) → cache in Redis (24hr) → return full response |
+| 5 | Play content | Player | — | — | Frontend uses source link from detail response. Direct FTP stream | — No API call. Frontend takes source URL from #4 response and streams via Plyr.js directly from BDIX FTP |
+| 6 | Source fails (404) | Player | — | — | Backend triggers silent re-scan. Frontend auto-switches to next source | ContentController@reportBroken() → dispatch RescanSourceJob($sourceId, $filePath) → job checks FTP for new path → updates DB or marks 'broken' |
+| 7 | Send health report | Background | /api/sources/health-report | POST | Body: {isp_name, sources: [{source_id, is_reachable, response_time_ms}]}. No IPs | SourceHealthController@store() → validate request → SourceHealthReport::insert($reports) → dispatch HealthAggregatorJob → return 201 |
+| | **Authentication** | | | | | |
+| 8 | Register | Register | /api/auth/register | POST | Body: {name, email, password}. Returns Sanctum token | AuthController@register() → validate RegisterRequest → User::create([hash password bcrypt]) → $user->createToken('auth_token')->plainTextToken → return token + user |
+| 9 | Login | Login | /api/auth/login | POST | Body: {email, password}. Returns Sanctum token (non-expiring until logout) | AuthController@login() → validate LoginRequest → Auth::attempt($credentials) → $user->createToken('auth_token')->plainTextToken → return token + user |
+| 10 | View profile | Profile | /api/auth/me | GET | Returns current user info. Bearer auth | AuthController@me() → return $request->user() (Sanctum middleware resolves user from Bearer token) |
+| 11 | Logout | Header | /api/auth/logout | POST | Revokes Sanctum token | AuthController@logout() → $request->user()->currentAccessToken()->delete() → return 204 |
+| | **User Library** | | | | | |
+| 12 | View library | Library | /api/user/library | GET | All-in-one: watchlist + favorites + recent history. Frontend separates | UserLibraryController@index() → $user->watchlists()->with('content')->get() + $user->favorites()->with('content')->get() + Cache::get("user:{$id}:recently_watched") → return combined |
+| 13 | Add to watchlist | Detail | /api/user/watchlist | POST | Body: {content_id} | WatchlistController@store() → validate content_id exists → Watchlist::firstOrCreate(['user_id' => auth, 'content_id' => $id]) → return 201 |
+| 14 | Remove from watchlist | Library | /api/user/watchlist/{content_id} | DELETE | Removes item | WatchlistController@destroy($contentId) → Watchlist::where('user_id', auth)->where('content_id', $contentId)->delete() → return 204 |
+| 15 | Add to favorites | Detail | /api/user/favorites | POST | Body: {content_id} | FavoriteController@store() → validate content_id exists → Favorite::firstOrCreate(['user_id' => auth, 'content_id' => $id]) → return 201 |
+| 16 | Remove from favorites | Library | /api/user/favorites/{content_id} | DELETE | Removes item | FavoriteController@destroy($contentId) → Favorite::where('user_id', auth)->where('content_id', $contentId)->delete() → return 204 |
+| 17 | Play (record history) | Player | /api/user/history | POST | Body: {content_id, episode_id?}. Auto-recorded on play click | WatchHistoryController@store() → WatchHistory::create([...]) → Content::increment('watch_count') → Cache::put("user:{$id}:recently_watched", last 10) → return 201 |
+| 18 | View full history | History | /api/user/history | GET | Paginated chronological history | WatchHistoryController@index() → WatchHistory::where('user_id', auth)->with('content')->orderBy('created_at', 'desc')->paginate(20) → return {data, meta} |
+| | **Admin — Dashboard** | | | | | |
+| 19 | View dashboard | Dashboard | /api/admin/dashboard | GET | Users, content, sources, queue size, enrichment progress | Admin\DashboardController@index() → User::count() + Content::count() + Source::count() + Content::where('enrichment_status', 'flagged')->count() + Cache::get('enrichment:stats') → return aggregated |
+| | **Admin — Sources** | | | | | |
+| 20 | List sources | Sources | /api/admin/sources | GET | All sources with config, scan logs, health, ISP breakdown | Admin\SourceController@index() → Source::with('latestScanLog')->withCount('contentSources')->get() → return all sources |
+| 21 | Add source | Sources | /api/admin/sources | POST | Body: {name, base_url, scraper_type, config, priority} | Admin\SourceController@store() → validate SourceRequest → Source::create([..., 'is_active' => false]) → return 201 |
+| 22 | View source detail | Source Detail | /api/admin/sources/{id} | GET | Config, scan history, per-ISP health | Admin\SourceController@show($id) → Source::with('scanLogs', 'healthReports')->findOrFail($id) → aggregate health by ISP → return detail |
+| 23 | Edit source | Source Detail | /api/admin/sources/{id} | PUT | Body: updated fields | Admin\SourceController@update($id) → validate SourceRequest → $source->update($validated) → return updated source |
+| 24 | Delete source | Source Detail | /api/admin/sources/{id} | DELETE | Removes source and linked source_links | Admin\SourceController@destroy($id) → $source->delete() → CASCADE removes source_links via FK → return 204 |
+| 25 | Test connection | Source Detail | /api/admin/sources/{id}/test | POST | Pings source, returns connection status | Admin\SourceController@testConnection($id) → ScraperFactory::make($source->scraper_type) → $scraper->testConnection() → return {success, response_time_ms} |
+| 26 | Trigger scan | Source Detail | /api/admin/sources/{id}/scan | POST | Triggers Phase 1 scan for specific source | Admin\SourceController@triggerScan($id) → SourceScanLog::create(['status' => 'pending']) → dispatch ScanSourceJob($source) → return 202 |
+| | **Admin — Content** | | | | | |
+| 27 | List content | Content | /api/admin/contents | GET | All content with enrichment status. Frontend filters/searches | Admin\ContentController@index() → Content::with('sources')->select('id', 'title', 'type', 'confidence_score', 'is_published')->paginate(50) → return {data, meta} |
+| 28 | Update content flags | Content Detail | /api/admin/contents/{id} | PATCH | Body: {is_featured?, is_published?} | Admin\ContentController@update($id) → validate flags → $content->update($validated) → Cache::forget("content:{$id}") → return updated |
+| 29 | Delete content | Content Detail | /api/admin/contents/{id} | DELETE | Removes content record | Admin\ContentController@destroy($id) → $content->delete() → CASCADE removes seasons, episodes, sources, history, watchlists → return 204 |
+| 30 | Force metadata re-sync | Content Detail | /api/admin/contents/{id}/resync | POST | Re-fetches metadata from TMDb/OMDb | Admin\ContentController@resync($id) → dispatch SyncContentMetadataJob($content->tmdb_id) → return 202 |
+| | **Admin — Review Queue** | | | | | |
+| 31 | View review queue | Review Queue | /api/admin/review-queue | GET | Low-confidence items with filenames and match suggestions | Admin\ReviewQueueController@index() → Content::whereIn('enrichment_status', ['flagged', 'pending'])->orWhere('confidence_score', '<', 80)->paginate(20) → return flagged items |
+| 32 | Approve match | Review Queue | /api/admin/review-queue/{id}/approve | POST | Confirms match as correct | Admin\ReviewQueueController@approve($id) → $content->update(['confidence_score' => 100, 'enrichment_status' => 'approved', 'is_published' => true]) → return 200 |
+| 33 | Correct match | Review Queue | /api/admin/review-queue/{id}/correct | POST | Body: {tmdb_id}. Applies corrected TMDb ID | Admin\ReviewQueueController@correct($id) → validate tmdb_id → $content->update(['tmdb_id' => $new]) → dispatch SyncContentMetadataJob($new) → return 200 |
+| 34 | Reject match | Review Queue | /api/admin/review-queue/{id}/reject | POST | Removes content | Admin\ReviewQueueController@reject($id) → $content->update(['is_published' => false, 'enrichment_status' => 'rejected']) → return 200 |
+| | **Admin — Users** | | | | | |
+| 35 | List users | Users | /api/admin/users | GET | All users with signup date, last active, watch count | Admin\UserController@index() → User::withCount('watchHistory')->orderBy('created_at', 'desc')->paginate(50) → return {data, meta} |
+| 36 | Ban user | User Detail | /api/admin/users/{id}/ban | POST | Blocks user login | Admin\UserController@ban($id) → $user->update(['is_banned' => true]) → $user->tokens()->delete() (revoke all Sanctum tokens) → return 200 |
+| 37 | Unban user | User Detail | /api/admin/users/{id}/unban | POST | Restores access | Admin\UserController@unban($id) → $user->update(['is_banned' => false]) → return 200 |
+| 38 | Reset password | User Detail | /api/admin/users/{id}/reset-password | POST | Generates temp password or sends reset link | Admin\UserController@resetPassword($id) → $temp = Str::random(12) → $user->update(['password' => bcrypt($temp)]) → $user->tokens()->delete() → return {temp_password} |
+| | **Admin — Enrichment & Settings** | | | | | |
+| 39 | View enrichment status | Enrichment | /api/admin/enrichment | GET | Worker status, queue size, processing rate | Admin\EnrichmentController@status() → Cache::get('enrichment:paused') + Content::where('enrichment_status', 'pending')->count() + Cache::get('enrichment:rate') → return stats |
+| 40 | Pause enrichment | Enrichment | /api/admin/enrichment/pause | POST | Pauses worker | Admin\EnrichmentController@pause() → Cache::put('enrichment:paused', true) → return 200 (worker checks this flag each loop) |
+| 41 | Resume enrichment | Enrichment | /api/admin/enrichment/resume | POST | Resumes worker | Admin\EnrichmentController@resume() → Cache::forget('enrichment:paused') → return 200 (worker resumes next iteration) |
+| 42 | View settings | Settings | /api/admin/settings | GET | API keys, scan schedule, site name | Admin\SettingController@index() → Setting::all()->pluck('value', 'key') → return key-value pairs |
+| 43 | Update settings | Settings | /api/admin/settings | PUT | Body: {key: value, ...} | Admin\SettingController@update() → validate → Setting::upsert($settings, ['key'], ['value']) → Cache::flush('settings') → return 200 |
+| 44 | View analytics | Analytics | /api/admin/analytics | GET | Usage trends, source stats (Post-MVP) | Admin\AnalyticsController@index() → aggregate WatchHistory, Content, Source stats → return trends (Post-MVP) |

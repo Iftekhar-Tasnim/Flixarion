@@ -1,10 +1,13 @@
- # BDFlix — Software Requirements Specification (SRS)
+ # Flixarion — Software Requirements Specification (SRS)
+
+> **SCOPE NOTE: This repository (Flixarion) is strictly the Laravel Backend API. All Frontend (Next.js) and Admin Panel (Vue.js) components have been moved to separate repositories and their implementation scope is excluded from this codebase.**
+
 
 **Version**: 2.0  
 **Date**: 2026-02-18  
 **Author**: Iftekhar Tasnim  
 **Status**: Draft  
-**Reference**: [BRD v1.0](file:///Volumes/WD%20M.2/BluBird/BDFlix/docs/BRD.md) | [Project Plan v1.1](file:///Volumes/WD%20M.2/BluBird/BDFlix/docs/project_plan.md)
+**Reference**: [BRD v1.0](file:///Volumes/WD%20M.2/BluBird/Flixarion/docs/BRD.md) | [Project Plan v1.1](file:///Volumes/WD%20M.2/BluBird/Flixarion/docs/project_plan.md)
 
 ---
 
@@ -12,12 +15,12 @@
 
 ### 1.1 Purpose
 
-This SRS defines the functional and non-functional requirements for **BDFlix** — a free, full-stack movie and TV series streaming platform aggregating content from Bangladesh BDIX FTP servers.
+This SRS defines the functional and non-functional requirements for **Flixarion** — a free, full-stack movie and TV series streaming platform aggregating content from Bangladesh BDIX FTP servers.
 
 ### 1.2 Scope
 
-BDFlix consists of three deployable components:
-1. **Backend API** (Laravel 11) — REST API, two-phase content scanning, metadata enrichment, crowdsourced health monitoring
+The Flixarion ecosystem consists of three components (this repo only covers the Backend API):
+1. **Backend API** (Laravel 12) — REST API, two-phase content scanning, metadata enrichment, crowdsourced health monitoring
 2. **Frontend** (Next.js 14) — User-facing streaming interface with ISP-based source detection, Playback Bridge, and Service Worker caching
 3. **Admin Panel** (Vue.js 3) — Source, content, user management, review queue, and crowdsourced health dashboard
 
@@ -28,7 +31,7 @@ BDFlix consists of three deployable components:
 | BDIX | Bangladesh Internet Exchange |
 | FTP | File Transfer Protocol |
 | HLS | HTTP Live Streaming (.m3u8) |
-| JWT | JSON Web Token |
+| Sanctum | Laravel Sanctum Token |
 | TMDb | The Movie Database API |
 | OMDb | Open Movie Database API |
 | Source | A BDIX FTP/media server hosting video content |
@@ -42,12 +45,12 @@ BDFlix consists of three deployable components:
 
 ### 1.4 References
 
-- BDFlix BRD v1.0
-- BDFlix Project Plan v1.1
+- Flixarion BRD v1.0
+- Flixarion Project Plan v1.1
 - [TMDb API Docs](https://developers.themoviedb.org/3)
 - [OMDb API Docs](https://www.omdbapi.com)
 - [Plyr.js Docs](https://github.com/sampotts/plyr)
-- [Laravel 11 Docs](https://laravel.com/docs)
+- [Laravel 12 Docs](https://laravel.com/docs)
 - [Next.js 14 Docs](https://nextjs.org/docs)
 
 ---
@@ -64,7 +67,7 @@ graph LR
         A[Admin]
     end
     
-    subgraph "BDFlix Platform"
+    subgraph "Flixarion Platform"
         FE[Next.js Frontend]
         AP[Vue.js Admin Panel]
         BE[Laravel API]
@@ -101,8 +104,8 @@ graph LR
 | User Class | Description | Authentication | Capabilities |
 |------------|-------------|----------------|-------------|
 | **Guest** | Unregistered visitor | None | Browse, search, filter, watch, download |
-| **Registered User** | Signed-up user | JWT | All guest capabilities + watchlist (debounced), favorites (debounced), trigger-only watch history, "Recently Watched" (cached last 10), manual "Mark as Completed" |
-| **Admin** | Platform administrator | JWT + Admin role | All capabilities + source management, content management, user management, review queue, crowdsourced health dashboard, enrichment worker control, analytics |
+| **Registered User** | Signed-up user | Sanctum | All guest capabilities + watchlist (debounced), favorites (debounced), trigger-only watch history, "Recently Watched" (cached last 10), manual "Mark as Completed" |
+| **Admin** | Platform administrator | Sanctum + Admin role | All capabilities + source management, content management, user management, review queue, crowdsourced health dashboard, enrichment worker control, analytics |
 
 ### 2.3 Operating Environment
 
@@ -133,8 +136,8 @@ graph LR
 | ID | Requirement | Priority | User Class |
 |----|-------------|----------|------------|
 | FR-AUTH-01 | System shall allow users to register with name, email, and password | Critical | Guest |
-| FR-AUTH-02 | System shall authenticate users via email and password, returning a JWT | Critical | Guest |
-| FR-AUTH-03 | System shall support JWT token refresh without re-login | Critical | Registered |
+| FR-AUTH-02 | System shall authenticate users via email and password, returning a Sanctum | Critical | Guest |
+| FR-AUTH-03 | System shall issue non-expiring Sanctum tokens that persist until the user logs out | High | Registered |
 | FR-AUTH-04 | System shall allow users to log out (invalidate token) | High | Registered |
 | FR-AUTH-05 | System shall provide a `/me` endpoint returning authenticated user profile | High | Registered |
 | FR-AUTH-06 | Passwords shall be hashed using bcrypt before storage | Critical | System |
@@ -155,7 +158,7 @@ graph LR
 | FR-BROWSE-09 | System shall provide recently added content endpoint | High | Sorted by created_at |
 | FR-BROWSE-10 | Content detail shall include: title, description, poster, backdrop, year, genres, rating, runtime, trailer URL, cast, director | Critical | From metadata JSONB |
 | FR-BROWSE-11 | For series: content detail shall include seasons with episode listings, episode titles, and thumbnails | Critical | Nested: seasons → episodes |
-| FR-BROWSE-12 | Content detail shall include all available sources with quality, file size, and codec information | Critical | From content_sources/episode_sources |
+| FR-BROWSE-12 | Content detail shall include all available sources with quality, file size, and codec information | Critical | From `source_links` (polymorphic) |
 | FR-BROWSE-13 | When `available_only=true` filter is applied, only show content with sources accessible to the current user | Moderate | Requires ISP reachability data |
 | FR-BROWSE-14 | BDIX source links shall be generated via JavaScript after user interaction to keep them hidden from search engine crawlers | High | No SSR for source URLs |
 | FR-BROWSE-15 | The `robots.txt` file shall prevent crawling of `/play/` and `/source/` routes to avoid indexing private BDIX IPs | High | SEO protection |
@@ -336,7 +339,7 @@ graph LR
 | ID | Requirement |
 |----|-------------|
 | NFR-SEC-01 | All passwords shall be hashed with bcrypt (cost factor 10+) |
-| NFR-SEC-02 | Authentication shall use JWT with short-lived access tokens + refresh tokens |
+| NFR-SEC-02 | Authentication shall use Sanctum with non-expiring API tokens (revoked on logout) |
 | NFR-SEC-03 | Admin routes shall be protected by admin middleware (role check) |
 | NFR-SEC-04 | API shall implement rate limiting (e.g., 60 requests/minute per user) |
 | NFR-SEC-05 | CORS shall be configured to allow only frontend and admin panel origins |
@@ -412,14 +415,14 @@ graph LR
 
 ### 5.1 Data Model Overview
 
-15+ database tables across 5 domains:
+18 database tables across 5 domains:
 
 | Domain | Tables |
 |--------|--------|
 | **Users** | `users` |
-| **Content** | `contents`, `seasons`, `episodes` |
-| **Sources** | `sources`, `content_sources`, `episode_sources`, `source_scan_logs` |
-| **User Activity** | `watch_history`, `watchlists`, `favorites`, `ratings`, `reviews`, `user_sources` |
+| **Content** | `contents`, `genres`, `content_genre`, `seasons`, `episodes` |
+| **Sources** | `sources`, `source_links`, `shadow_content_sources`, `source_scan_logs` |
+| **User Activity** | `watch_history`, `watchlists`, `favorites`, `ratings`, `reviews` |
 | **Health Monitoring** | `source_health_reports` (crowdsourced ISP-based reachability) |
 
 ### 5.2 Key Schema Notes
@@ -427,9 +430,9 @@ graph LR
 | Aspect | Decision | BRD Reference |
 |--------|----------|---------------|
 | **Content anchor** | TMDb ID (not IMDb ID) is the unique identifier for deduplication | BR-01.20 |
-| **Source links** | Each source link stores: source_id, file_path, quality, file_size, codec_info, linked_subtitle_paths | BR-01.29 |
+| **Source links** | Each source link (polymorphic `source_links` table) stores: source_id, file_path, quality, file_size, codec_info, linked_subtitle_paths | BR-01.29 |
 | **Watch history** | Trigger-only (one entry per play session, no playback position) | BR-05.6, BR-05.7 |
-| **Recently watched** | Last 10 items cached in JSON column or localStorage | BR-05.8 |
+| **Recently watched** | Last 10 items cached in Redis (`user:{id}:recently_watched`, 5-min TTL) | BR-05.8 |
 | **TV series hierarchy** | Series > Season > Episode | BR-01.26 |
 | **Shadow table** | Temporary table for Phase 1 scan results before batch sync | BR-01.7 |
 | **Health reports** | ISP name + source_id + reachability status (no IP addresses) | BR-06.6, BR-06.7 |
@@ -451,8 +454,8 @@ graph LR
 ### 5.4 Data Integrity
 
 - Foreign key constraints with `ON DELETE CASCADE` for user-related tables
-- Unique constraints on: `users.email`, `contents.tmdb_id`, `sources.name`, `(user_id, content_id)` on watchlists/favorites/ratings, `(user_id, source_id)` on user_sources
-- Database indexes on frequently queried columns: `contents.type`, `contents.year`, `contents.rating`, `contents.tmdb_id`, `user_sources.user_id`, `user_sources.is_accessible`, `source_health_reports.source_id`, `source_health_reports.isp_name`
+- Unique constraints on: `users.email`, `contents.tmdb_id`, `sources.name`, `(user_id, content_id)` on watchlists/favorites/ratings, `(content_id, genre_id)` on content_genre
+- Database indexes on frequently queried columns: `contents.type`, `contents.year`, `contents.rating`, `contents.tmdb_id`, `contents.enrichment_status`, `source_links.linkable_type + linkable_id`, `source_health_reports.source_id`, `source_health_reports.isp_name`
 
 ---
 
@@ -463,7 +466,7 @@ graph LR
 - **Protocol**: HTTPS (production), HTTP (development)
 - **Architecture**: RESTful JSON API
 - **Base URL**: `/api/`
-- **Authentication**: Bearer JWT token in `Authorization` header
+- **Authentication**: Bearer Sanctum token in `Authorization` header
 - **Pagination**: Cursor/offset-based, default 20 items per page
 - **Error format**:
 ```json
@@ -481,7 +484,7 @@ graph LR
 }
 ```
 
-> Full API endpoint listing in [Project Plan Section 7](file:///Volumes/WD%20M.2/BluBird/BDFlix/docs/project_plan.md).
+> Full API endpoint listing in [Project Plan Section 7](file:///Volumes/WD%20M.2/BluBird/Flixarion/docs/project_plan.md).
 
 ### 6.2 External API Interfaces
 
@@ -519,7 +522,7 @@ graph LR
 
 | Component | Technology | Port | Deployment |
 |-----------|-----------|------|------------|
-| Backend API | Laravel 11 | 8000 | PHP-FPM + Nginx |
+| Backend API | Laravel 12 | 8000 | PHP-FPM + Nginx |
 | Frontend | Next.js 14 | 3000 | Node.js + PM2 |
 | Admin Panel | Vue.js 3 | 8080 | Static build + Nginx |
 | Database | PostgreSQL 15+ | 5432 | Managed or self-hosted |
@@ -559,6 +562,6 @@ Mapping BRD business requirements to SRS functional requirements:
 ---
 
 **Document Version**: 2.0  
-**Project Name**: BDFlix  
+**Project Name**: Flixarion  
 **Approved By**: *Pending*  
 **Date**: 2026-02-18
