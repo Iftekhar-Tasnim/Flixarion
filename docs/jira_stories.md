@@ -62,7 +62,7 @@
 
 | # | Story | Priority | SRS Ref | Acceptance Criteria | Labels |
 |---|-------|----------|---------|-------------------|--------|
-| 22 | As the system, I want to automatically scan all active sources every 6 hours so that new content is discovered continuously | Critical | FR-SCAN-01, NFR-SCAL-03 | Given Laravel scheduler, then ScanSourceJob is dispatched for all active sources every 6 hours. Scans run in queue workers and never block the API | scan, backend, scheduler |
+| 22 | As the system, I want to scan sources via client-triggered requests and admin manual triggers so that new content is discovered without requiring direct server-to-FTP access | Critical | FR-SCAN-01, NFR-SCAL-03 | Given a user on a BDIX network, the frontend scans reachable FTP sources in the background (Web Worker) and POSTs new file listings to the backend. Admin can also trigger scans manually from a BDIX-connected machine. No server-side cron needed — the server cannot reach FTP directly | scan, backend, frontend |
 | 23 | As a developer, I want scanning split into two phases (Collector + Enricher) so that fast indexing is decoupled from slow API enrichment | Critical | FR-SCAN-02 | Given the scanning system, then Phase 1 collects files without API calls and Phase 2 enriches separately. Phases run independently for scalability | scan, backend, architecture |
 | 24 | As the system, I want Phase 1 to crawl sources and save raw paths to a shadow table so that the main table is never in an inconsistent state | Critical | FR-SCAN-03, FR-SCAN-06 | Given Phase 1 execution, then raw file paths and filenames are saved to a shadow table with status "pending" — zero external API calls. After crawl completes, a single batch sync moves data to the main table | scan, backend |
 | 25 | As the system, I want to only index valid video extensions so that non-video files and empty directories are ignored | Critical | FR-SCAN-04 | Given crawled files, then only valid video extensions (.mp4, .mkv, .avi, .m3u8) create DB entries — empty directories are ignored | scan, backend |
@@ -93,16 +93,18 @@
 
 ## Epic: Source Scrapers
 
-| # | Story | Priority | SRS Ref | Acceptance Criteria | Labels |
-|---|-------|----------|---------|-------------------|--------|
-| 41 | As a developer, I want a common BaseScraperInterface so that all scrapers follow a consistent, modular pattern | Critical | FR-SCRP-08, NFR-SCAL-02, NFR-MAIN-02 | Given any scraper, then it implements BaseScraperInterface with getName, testConnection, crawl methods. Each scraper is a separate, independently modifiable module | scraper, backend, architecture |
-| 42 | As the system, I want a Dflix scraper so that content from Dflix is indexed via HTTP POST + HTML parsing | Critical | FR-SCRP-01 | Given Dflix source, then scraper sends HTTP POST and parses HTML results | scraper, backend |
-| 43 | As the system, I want a DhakaFlix Movie scraper so that movies from DhakaFlix are indexed via JSON API | Critical | FR-SCRP-02 | Given DhakaFlix Movie source, then scraper sends JSON POST and parses response | scraper, backend |
-| 44 | As the system, I want a DhakaFlix Series scraper so that TV series from DhakaFlix are indexed via JSON API | Critical | FR-SCRP-03 | Given DhakaFlix Series source, then scraper sends JSON POST and parses response | scraper, backend |
-| 45 | As the system, I want a RoarZone scraper so that content from RoarZone is indexed via Emby API with guest auth | Critical | FR-SCRP-04 | Given RoarZone source, then scraper authenticates via Emby guest and fetches items | scraper, backend |
-| 46 | As the system, I want an FTPBD scraper so that content from FTPBD is indexed via Emby API | Critical | FR-SCRP-05 | Given FTPBD source, then scraper fetches items via Emby API | scraper, backend |
-| 47 | As the system, I want a CircleFTP scraper so that content from CircleFTP is indexed via REST API | Critical | FR-SCRP-06 | Given CircleFTP source, then scraper sends GET requests and parses REST response | scraper, backend |
-| 48 | As the system, I want an ICC FTP scraper so that content from ICC FTP is indexed via multi-step AJAX flow | High | FR-SCRP-07 | Given ICC FTP source, then scraper follows multi-step AJAX flow to extract streams | scraper, backend |
+### Phase 4C: Scrapers Development (Priority 4)
+| ID | Title | Phase | Description | SRS Ref | Component | Status |
+|---|---|---|---|---|---|---|
+| BDF-40 | Filename Parameter Configuration | Phase 4 | Configure dynamic rules for filename parsing | [12.1.2] | Backend | DONE |
+| BDF-41 | Dflix Scraper Module | Phase 4 | Build scraper for Dflix format | [4.2] | Backend | DONE |
+| BDF-42 | DhakaFlix Movie Scraper | Phase 4 | Build scraper for DhakaFlix movies | [4.3] | Backend | DONE |
+| BDF-43 | DhakaFlix Series Scraper | Phase 4 | Build scraper for DhakaFlix series | [4.3] | Backend | DONE |
+| BDF-44 | FTP Scraper (Emby/Jellyfin) | Phase 4 | Build scraper for RoarZone parsing (Emby) | [4.4] | Backend | DONE |
+| BDF-45 | Standard FTP Scraper | Phase 4 | Build standard directory scraper (FTPBD, CircleFTP) | [4.5], [4.6], [4.7] | Backend | DONE |
+| BDF-46 | Scraper Plugin Interface | Phase 4 | Define interface for adding custom scrapers | [11.5] | Backend | DONE |
+| BDF-47 | Proxy/VPN Rotation Engine | Phase 4 | Implement request rotation to avoid bans | [11.2] | Backend | DONE |
+| BDF-48 | Scraper Monitoring & Metrics | Phase 4 | Track success rates, errors, timeouts | [10.2] | Backend | DONE |
 
 ---
 

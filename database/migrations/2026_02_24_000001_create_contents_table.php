@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::create('contents', function (Blueprint $table) {
             $table->id();
-            $table->bigInteger('tmdb_id')->unique();
+            $table->bigInteger('tmdb_id')->nullable()->unique();
             $table->string('imdb_id', 20)->nullable()->index();
             $table->string('type', 50)->index();              // movie | series
             $table->string('title', 500);

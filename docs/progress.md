@@ -57,12 +57,12 @@
 
 ---
 
-## Epic: ISP Source Availability — 0/2
+## Epic: ISP Source Availability — 2/2 ✅
 
 | # | Story | Priority | Status |
 |---|-------|----------|--------|
-| 20 | Anonymous health reports endpoint | High | ⬜ |
-| 21 | Aggregate crowdsourced health | High | ⬜ |
+| 20 | Anonymous health reports endpoint | High | ✅ |
+| 21 | Aggregate crowdsourced health | High | ✅ |
 
 ---
 
@@ -114,22 +114,22 @@
 
 ---
 
-## Epic: Admin Panel API — 0/12
+## Epic: Admin Panel API — 12/12 ✅
 
 | # | Story | Priority | Status |
 |---|-------|----------|--------|
-| 49 | Dashboard stats endpoint | High | ⬜ |
-| 50 | CRUD sources + connection test | Critical | ⬜ |
-| 51 | View scan logs per source | High | ⬜ |
-| 52 | View/search/filter/delete content | Critical | ⬜ |
-| 53 | Force metadata re-sync | High | ⬜ |
-| 54 | Mark content as featured/trending | Moderate | ⬜ |
-| 55 | Review queue (approve/correct/reject) | High | ⬜ |
-| 56 | Crowdsourced health dashboard + ISP breakdown | High | ⬜ |
-| 57 | View/control enrichment worker | Moderate | ⬜ |
-| 58 | User management (list, ban/unban, reset) | High | ⬜ |
-| 59 | System settings CRUD | High | ⬜ |
-| 60 | Analytics endpoint (Post-MVP) | Low | ⬜ |
+| 49 | Dashboard stats endpoint | High | ✅ |
+| 50 | CRUD sources + connection test | Critical | ✅ |
+| 51 | View scan logs per source | High | ✅ |
+| 52 | View/search/filter/delete content | Critical | ✅ |
+| 53 | Force metadata re-sync | High | ✅ |
+| 54 | Mark content as featured/trending | Moderate | ✅ |
+| 55 | Review queue (approve/correct/reject) | High | ✅ |
+| 56 | Crowdsourced health dashboard + ISP breakdown | High | ✅ |
+| 57 | View/control enrichment worker | Moderate | ✅ |
+| 58 | User management (list, ban/unban, reset) | High | ✅ |
+| 59 | System settings CRUD | High | ✅ |
+| 60 | Analytics endpoint (Post-MVP) | Low | ✅ |
 
 ---
 
@@ -200,6 +200,6 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ Done | **22** |
-| ⬜ Not Started | **59** |
+| ✅ Done | **36** |
+| ⬜ Not Started | **45** |
 | **Total** | **81** |

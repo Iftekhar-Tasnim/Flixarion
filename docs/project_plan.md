@@ -93,9 +93,18 @@ graph TB
 ### Data Flow Summary
 
 ```
-FTP Sources → Scrapers → Filename Parser → TMDb/OMDb → PostgreSQL → Redis Cache → REST API → Next.js → User
-                                                                                                    ↓
-                                                                                            Direct FTP Stream
+Client-Triggered Scan:
+User visits → Frontend Race Strategy → Reachable FTPs identified
+→ Web Worker reads FTP directory listings (background, non-blocking)
+→ POSTs new file list to API → Backend saves to shadow_content_sources
+→ Enricher processes (TMDb/OMDb) → PostgreSQL → Redis Cache → API → User
+
+Admin Manual Scan:
+Admin (on BDIX network) → Triggers scan from admin panel
+→ Backend scraper connects to FTP directly → Same enrichment pipeline
+
+Note: The server is NOT on BDIX. It cannot reach FTP sources directly.
+Only BDIX-connected users/admins can trigger scans.
 ```
 
 > **Key Design Decision**: Video content is streamed **directly** from BDIX FTP servers to the user's browser. The Laravel backend only manages metadata and source URLs — it never proxies video data.
@@ -115,7 +124,7 @@ FTP Sources → Scrapers → Filename Parser → TMDb/OMDb → PostgreSQL → Re
 | 5 | **FTPBD** | `http://media.ftpbd.net:8096` | — | Emby API | ❌ Offline | Medium |
 | 6 | **CircleFTP** | `http://new.circleftp.net:5000/api` | Web: `http://new.circleftp.net` | REST API | ⚠️ Partial | Medium |
 | 7 | **ICC FTP** | `http://10.16.100.244` | — | Multi-step AJAX | ✅ Online | High |
-
+8 | **ihub** | `http://ihub.live/` | 
 ### 4.2 Implementation Priority
 
 - **Phase 1** (High Priority): DhakaFlix (Movie + Series), Dflix, ICC FTP — all confirmed online

@@ -14,7 +14,7 @@
 
 5. Start → Login → Search for a movie → Choose a movie → Add to watchlist → Add to favorites → Play movie (history auto-recorded) → Close player → View recently watched → Remove from watchlist → Remove from favorites → Logout → End.
 
-6. Start → App loads → Frontend pings all BDIX sources (Race Strategy) → Determines which sources are reachable → Sends reachable source IDs as ?sources=1,3,7 to API calls → Send anonymous health report to backend (ISP name + reachability, no IPs) → Content is filtered server-side by reachable sources → End.
+6. Start → App loads → Frontend pings all BDIX sources (Race Strategy) → Determines which sources are reachable → Sends reachable source IDs as ?sources=1,3,7 to API calls → Send anonymous health report to backend (ISP name + reachability, no IPs) → Content is filtered server-side by reachable sources → Web Worker reads FTP directory listings in background (non-blocking, delta-only) → POSTs new files to backend → Backend caches in shadow table and triggers enrichment → End.
 
 7. Start → Play content → Source fails (404) → Backend triggers silent re-scan → Auto-switch to next available source → Playback resumes → Continue watching → End.
 
@@ -76,6 +76,8 @@ User Library (/api/user) — Bearer Auth
 Source Health (/api/sources) — Public
 
 15. POST /sources/health-report – Submit anonymous ISP reachability. Body: {isp_name, sources: [{source_id, is_reachable, response_time_ms}]}
+
+16. POST /sources/{id}/scan-results – Client-triggered scan. Frontend Web Worker reads FTP directory listing in background (non-blocking, delta-only) and POSTs new file list to backend for caching and enrichment
 
 
 Admin Dashboard (/api/admin) — Admin Auth
