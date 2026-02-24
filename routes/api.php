@@ -23,12 +23,3 @@ Route::prefix('auth')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
     });
 });
-
-// ── Public Content Routes (placeholder for Phase 2) ──
-// Route::prefix('contents')->group(function () { ... });
-
-// ── Authenticated User Routes (placeholder for Phase 2) ──
-// Route::middleware('auth:sanctum')->prefix('user')->group(function () { ... });
-
-// ── Admin Routes (placeholder for Phase 2) ──
-// Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () { ... });
