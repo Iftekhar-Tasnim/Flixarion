@@ -130,6 +130,43 @@ class SourceController extends Controller
     }
 
     /**
+     * Test all source connections at once.
+     */
+    public function testAllConnections(): JsonResponse
+    {
+        $sources = Source::all();
+        $results = [];
+
+        foreach ($sources as $source) {
+            try {
+                $scraper = \App\Scrapers\ScraperFactory::make($source);
+                $success = $scraper->testConnection();
+                $results[] = [
+                    'source_id' => $source->id,
+                    'name' => $source->name,
+                    'scraper' => $scraper->getName(),
+                    'success' => $success,
+                ];
+
+                // Update active/offline status based on connection (optional but helpful)
+                // $source->update(['is_active' => $success]); 
+
+            } catch (\Exception $e) {
+                $results[] = [
+                    'source_id' => $source->id,
+                    'name' => $source->name,
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return $this->successResponse([
+            'results' => $results,
+        ]);
+    }
+
+    /**
      * Trigger manual scan. Story #30 (Admin-triggered scan)
      */
     public function triggerScan(int $id): JsonResponse
@@ -144,7 +181,31 @@ class SourceController extends Controller
 
         return $this->successResponse([
             'source_id' => $source->id,
+            'name' => $source->name,
             'message' => 'Scan job dispatched successfully.',
+        ], status: 202);
+    }
+
+    /**
+     * Trigger scan for ALL active sources at once.
+     */
+    public function scanAll(): JsonResponse
+    {
+        $sources = Source::where('is_active', true)->get();
+        $dispatched = [];
+
+        foreach ($sources as $source) {
+            \App\Jobs\ScanSourceJob::dispatch($source->id);
+            $dispatched[] = [
+                'source_id' => $source->id,
+                'name' => $source->name,
+            ];
+        }
+
+        return $this->successResponse([
+            'dispatched' => $dispatched,
+            'total' => count($dispatched),
+            'message' => 'Scan jobs dispatched for all active sources.',
         ], status: 202);
     }
 }

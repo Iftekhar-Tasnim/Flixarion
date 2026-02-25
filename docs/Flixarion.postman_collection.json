@@ -1,29 +1,65 @@
 {
     "info": {
         "name": "Flixarion API",
-        "description": "Flixarion — Laravel 12 Backend API\n\nBase URL: http://127.0.0.1:8000/api",
+        "description": "Flixarion Backend API\n\nBase URL: http://127.0.0.1:8000/api\n\nAdmin credentials:\n  Email: admin@flixarion.com\n  Password: password123\n\nWorkflow:\n1. Run 'Auth → Admin Login' to populate {{admin_token}}\n2. Run 'Admin → Sources → Test All' to check server health\n3. Run 'Admin → Sources → Scan All' to scrape all active servers",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "variable": [
         {
             "key": "base_url",
-            "value": "http://127.0.0.1:8000/api"
+            "value": "http://127.0.0.1:8000/api",
+            "type": "string"
         },
         {
             "key": "token",
-            "value": ""
+            "value": "",
+            "type": "string"
         },
         {
             "key": "admin_token",
-            "value": ""
+            "value": "",
+            "type": "string"
         }
     ],
     "item": [
         {
             "name": "Auth",
+            "description": "Authenticate and get tokens. Run 'Admin Login ★' first.",
             "item": [
                 {
-                    "name": "Register",
+                    "name": "Register (New User)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auth/register",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "register"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
                     "event": [
                         {
                             "listen": "test",
@@ -31,28 +67,16 @@
                                 "type": "text/javascript",
                                 "exec": [
                                     "const res = pm.response.json();",
-                                    "",
                                     "pm.test('Status 201', () => pm.response.to.have.status(201));",
                                     "pm.test('Has token', () => pm.expect(res.data.token).to.be.a('string'));",
-                                    "pm.test('Has user', () => pm.expect(res.data.user.email).to.eql(pm.variables.get('test_email')));",
-                                    "",
-                                    "if (res.data && res.data.token) {",
-                                    "    pm.collectionVariables.set('token', res.data.token);",
-                                    "}"
-                                ]
-                            }
-                        },
-                        {
-                            "listen": "prerequest",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "const email = 'test_' + Date.now() + '@example.com';",
-                                    "pm.variables.set('test_email', email);"
+                                    "if (res.data && res.data.token) pm.collectionVariables.set('token', res.data.token);"
                                 ]
                             }
                         }
-                    ],
+                    ]
+                },
+                {
+                    "name": "Login (User)",
                     "request": {
                         "method": "POST",
                         "header": [
@@ -65,116 +89,26 @@
                                 "value": "application/json"
                             }
                         ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"{{test_email}}\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\"\n}"
-                        },
                         "url": {
-                            "raw": "{{base_url}}/auth/register",
+                            "raw": "{{base_url}}/auth/login",
                             "host": [
                                 "{{base_url}}"
                             ],
                             "path": [
                                 "auth",
-                                "register"
+                                "login"
                             ]
-                        }
-                    }
-                },
-                {
-                    "name": "Register — Duplicate Email (422)",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "pm.test('Status 422', () => pm.response.to.have.status(422));",
-                                    "pm.test('Has email error', () => {",
-                                    "    const res = pm.response.json();",
-                                    "    pm.expect(res.errors.email).to.be.an('array');",
-                                    "});"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
+                        },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Duplicate User\",\n    \"email\": \"{{test_email}}\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/auth/register",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "auth",
-                                "register"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Register — Missing Fields (422)",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "pm.test('Status 422', () => pm.response.to.have.status(422));",
-                                    "pm.test('Has validation errors', () => {",
-                                    "    const res = pm.response.json();",
-                                    "    pm.expect(res.errors).to.have.property('name');",
-                                    "    pm.expect(res.errors).to.have.property('email');",
-                                    "    pm.expect(res.errors).to.have.property('password');",
-                                    "});"
-                                ]
+                            "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
                             }
                         }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/auth/register",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "auth",
-                                "register"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Login",
+                    },
                     "event": [
                         {
                             "listen": "test",
@@ -182,18 +116,16 @@
                                 "type": "text/javascript",
                                 "exec": [
                                     "const res = pm.response.json();",
-                                    "",
                                     "pm.test('Status 200', () => pm.response.to.have.status(200));",
                                     "pm.test('Has token', () => pm.expect(res.data.token).to.be.a('string'));",
-                                    "pm.test('Has user object', () => pm.expect(res.data.user).to.have.property('id'));",
-                                    "",
-                                    "if (res.data && res.data.token) {",
-                                    "    pm.collectionVariables.set('token', res.data.token);",
-                                    "}"
+                                    "if (res.data && res.data.token) pm.collectionVariables.set('token', res.data.token);"
                                 ]
                             }
                         }
-                    ],
+                    ]
+                },
+                {
+                    "name": "Admin Login ★",
                     "request": {
                         "method": "POST",
                         "header": [
@@ -206,10 +138,6 @@
                                 "value": "application/json"
                             }
                         ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"email\": \"{{test_email}}\",\n    \"password\": \"password123\"\n}"
-                        },
                         "url": {
                             "raw": "{{base_url}}/auth/login",
                             "host": [
@@ -219,57 +147,17 @@
                                 "auth",
                                 "login"
                             ]
-                        }
-                    }
-                },
-                {
-                    "name": "Login — Wrong Password (401)",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "pm.test('Status 401', () => pm.response.to.have.status(401));",
-                                    "pm.test('Has error message', () => {",
-                                    "    const res = pm.response.json();",
-                                    "    pm.expect(res.error).to.eql(true);",
-                                    "    pm.expect(res.message).to.be.a('string');",
-                                    "});"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
+                        },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"email\": \"{{test_email}}\",\n    \"password\": \"wrongpassword\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/auth/login",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "auth",
-                                "login"
-                            ]
+                            "raw": "{\n    \"email\": \"admin@flixarion.com\",\n    \"password\": \"password123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         }
-                    }
-                },
-                {
-                    "name": "Me — Get Profile",
+                    },
                     "event": [
                         {
                             "listen": "test",
@@ -277,30 +165,25 @@
                                 "type": "text/javascript",
                                 "exec": [
                                     "const res = pm.response.json();",
-                                    "",
                                     "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                                    "pm.test('Has user data', () => {",
-                                    "    pm.expect(res.data).to.have.property('id');",
-                                    "    pm.expect(res.data).to.have.property('name');",
-                                    "    pm.expect(res.data).to.have.property('email');",
-                                    "});",
-                                    "pm.test('No password exposed', () => {",
-                                    "    pm.expect(res.data).to.not.have.property('password');",
-                                    "});"
+                                    "pm.test('Has token', () => pm.expect(res.data.token).to.be.a('string'));",
+                                    "if (res.data && res.data.token) {",
+                                    "    pm.collectionVariables.set('token', res.data.token);",
+                                    "    pm.collectionVariables.set('admin_token', res.data.token);",
+                                    "}"
                                 ]
                             }
                         }
-                    ],
+                    ]
+                },
+                {
+                    "name": "Get My Profile",
                     "request": {
                         "method": "GET",
                         "header": [
                             {
                                 "key": "Accept",
                                 "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
                             }
                         ],
                         "url": {
@@ -312,66 +195,27 @@
                                 "auth",
                                 "me"
                             ]
-                        }
-                    }
-                },
-                {
-                    "name": "Me — Unauthenticated (401)",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "pm.test('Status 401', () => pm.response.to.have.status(401));"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/auth/me",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "auth",
-                                "me"
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
                             ]
                         }
                     }
                 },
                 {
                     "name": "Logout",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "type": "text/javascript",
-                                "exec": [
-                                    "pm.test('Status 204', () => pm.response.to.have.status(204));",
-                                    "pm.collectionVariables.set('token', '');"
-                                ]
-                            }
-                        }
-                    ],
                     "request": {
                         "method": "POST",
                         "header": [
                             {
                                 "key": "Accept",
                                 "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
                             }
                         ],
                         "url": {
@@ -383,13 +227,24 @@
                                 "auth",
                                 "logout"
                             ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
                         }
                     }
                 }
             ]
         },
         {
-            "name": "Content",
+            "name": "Content (Public)",
+            "description": "",
             "item": [
                 {
                     "name": "Browse All",
@@ -423,38 +278,7 @@
                     }
                 },
                 {
-                    "name": "Browse by Reachable Sources",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/contents?sources=1,3&sort=trending",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "contents"
-                            ],
-                            "query": [
-                                {
-                                    "key": "sources",
-                                    "value": "1,3"
-                                },
-                                {
-                                    "key": "sort",
-                                    "value": "trending"
-                                }
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Filter by Type (movie)",
+                    "name": "Filter by Type",
                     "request": {
                         "method": "GET",
                         "header": [
@@ -508,7 +332,7 @@
                     }
                 },
                 {
-                    "name": "Trending",
+                    "name": "Sort by Trending",
                     "request": {
                         "method": "GET",
                         "header": [
@@ -588,6 +412,7 @@
         },
         {
             "name": "User Library",
+            "description": "",
             "item": [
                 {
                     "name": "Combined Library",
@@ -597,10 +422,6 @@
                             {
                                 "key": "Accept",
                                 "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
                             }
                         ],
                         "url": {
@@ -611,6 +432,16 @@
                             "path": [
                                 "user",
                                 "library"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
                             ]
                         }
                     }
@@ -623,10 +454,6 @@
                             {
                                 "key": "Accept",
                                 "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
                             }
                         ],
                         "url": {
@@ -637,6 +464,16 @@
                             "path": [
                                 "user",
                                 "watchlist"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
                             ]
                         }
                     }
@@ -653,16 +490,8 @@
                             {
                                 "key": "Content-Type",
                                 "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
                             }
                         ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"content_id\": 1\n}"
-                        },
                         "url": {
                             "raw": "{{base_url}}/user/watchlist",
                             "host": [
@@ -672,6 +501,25 @@
                                 "user",
                                 "watchlist"
                             ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"content_id\": 1\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         }
                     }
                 },
@@ -683,10 +531,6 @@
                             {
                                 "key": "Accept",
                                 "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
                             }
                         ],
                         "url": {
@@ -699,6 +543,16 @@
                                 "watchlist",
                                 "1"
                             ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
                         }
                     }
                 },
@@ -710,10 +564,6 @@
                             {
                                 "key": "Accept",
                                 "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
                             }
                         ],
                         "url": {
@@ -724,6 +574,16 @@
                             "path": [
                                 "user",
                                 "favorites"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
                             ]
                         }
                     }
@@ -740,16 +600,8 @@
                             {
                                 "key": "Content-Type",
                                 "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
                             }
                         ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"content_id\": 1\n}"
-                        },
                         "url": {
                             "raw": "{{base_url}}/user/favorites",
                             "host": [
@@ -759,6 +611,25 @@
                                 "user",
                                 "favorites"
                             ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"content_id\": 1\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         }
                     }
                 },
@@ -770,10 +641,6 @@
                             {
                                 "key": "Accept",
                                 "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
                             }
                         ],
                         "url": {
@@ -785,6 +652,16 @@
                                 "user",
                                 "favorites",
                                 "1"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
                             ]
                         }
                     }
@@ -801,16 +678,8 @@
                             {
                                 "key": "Content-Type",
                                 "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
                             }
                         ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"content_id\": 1\n}"
-                        },
                         "url": {
                             "raw": "{{base_url}}/user/history",
                             "host": [
@@ -820,6 +689,25 @@
                                 "user",
                                 "history"
                             ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"content_id\": 1,\n    \"progress_seconds\": 0\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         }
                     }
                 },
@@ -831,10 +719,6 @@
                             {
                                 "key": "Accept",
                                 "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
                             }
                         ],
                         "url": {
@@ -846,6 +730,1554 @@
                                 "user",
                                 "history"
                             ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin — Sources",
+            "description": "",
+            "item": [
+                {
+                    "name": "List All Sources",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/sources",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "sources"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Source",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/sources",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "sources"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"New Source\",\n    \"base_url\": \"http://example.com\",\n    \"scraper_type\": \"dflix\",\n    \"priority\": 9,\n    \"is_active\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "View Source",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/sources/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "sources",
+                                "1"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Source",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/sources/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "sources",
+                                "1"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Updated Name\",\n    \"config\": {\n        \"api_key\": \"EMBY_KEY_HERE\"\n    }\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Source",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/sources/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "sources",
+                                "1"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Connection Tests",
+                    "description": "",
+                    "item": [
+                        {
+                            "name": "Test All Servers",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/test-all",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "test-all"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Test — Dflix",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/1/test",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "1",
+                                        "test"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Test — DhakaFlix (Movie)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/2/test",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "2",
+                                        "test"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Test — DhakaFlix (Series)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/3/test",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "3",
+                                        "test"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Test — RoarZone",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/4/test",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "4",
+                                        "test"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Test — FTPBD",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/5/test",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "5",
+                                        "test"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Test — CircleFTP",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/6/test",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "6",
+                                        "test"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Test — ICC FTP",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/7/test",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "7",
+                                        "test"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Test — ihub",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/8/test",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "8",
+                                        "test"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Scan Jobs",
+                    "description": "",
+                    "item": [
+                        {
+                            "name": "Scan All Active Servers ★",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/scan-all",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "scan-all"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Scan — Dflix",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/1/scan",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "1",
+                                        "scan"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Scan — DhakaFlix (Movie)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/2/scan",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "2",
+                                        "scan"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Scan — DhakaFlix (Series)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/3/scan",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "3",
+                                        "scan"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Scan — RoarZone",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/4/scan",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "4",
+                                        "scan"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Scan — FTPBD",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/5/scan",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "5",
+                                        "scan"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Scan — CircleFTP",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/6/scan",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "6",
+                                        "scan"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Scan — ICC FTP",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/7/scan",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "7",
+                                        "scan"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Scan — ihub",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/admin/sources/8/scan",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "admin",
+                                        "sources",
+                                        "8",
+                                        "scan"
+                                    ]
+                                },
+                                "auth": {
+                                    "type": "bearer",
+                                    "bearer": [
+                                        {
+                                            "key": "token",
+                                            "value": "{{admin_token}}",
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Admin — Content",
+            "description": "",
+            "item": [
+                {
+                    "name": "List Content",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/contents?search=&status=completed",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "contents"
+                            ],
+                            "query": [
+                                {
+                                    "key": "search",
+                                    "value": ""
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "completed"
+                                }
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Content Flags",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/contents/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "contents",
+                                "1"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"is_featured\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Content",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/contents/1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "contents",
+                                "1"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Force Re-sync TMDb",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/contents/1/resync",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "contents",
+                                "1",
+                                "resync"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin — Review Queue",
+            "description": "",
+            "item": [
+                {
+                    "name": "View Queue",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/review-queue",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "review-queue"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Approve Content",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/review-queue/1/approve",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "review-queue",
+                                "1",
+                                "approve"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Correct TMDb ID",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/review-queue/1/correct",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "review-queue",
+                                "1",
+                                "correct"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"tmdb_id\": 12345\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Reject Content",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/review-queue/1/reject",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "review-queue",
+                                "1",
+                                "reject"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin — Enrichment",
+            "description": "",
+            "item": [
+                {
+                    "name": "Enrichment Status",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/enrichment",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "enrichment"
+                            ]
+                        }
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Has shadow_counts', () => pm.expect(res.data).to.have.property('shadow_counts'));",
+                                    "console.log('Shadow counts:', JSON.stringify(res.data.shadow_counts));"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Pause Enrichment",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/enrichment/pause",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "enrichment",
+                                "pause"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Resume Enrichment",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/enrichment/resume",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "enrichment",
+                                "resume"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Retry Pending ★",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/enrichment/retry-pending",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "enrichment",
+                                "retry-pending"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Retry Unmatched",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/enrichment/retry-unmatched",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "enrichment",
+                                "retry-unmatched"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin — Users",
+            "description": "",
+            "item": [
+                {
+                    "name": "List Users",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/users",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Ban User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/1/ban",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users",
+                                "1",
+                                "ban"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Unban User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/1/unban",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users",
+                                "1",
+                                "unban"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Reset User Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/users/1/reset-password",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "users",
+                                "1",
+                                "reset-password"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin — Settings",
+            "description": "",
+            "item": [
+                {
+                    "name": "View Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/settings",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "settings"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Settings",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin/settings",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "settings"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{admin_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"tmdb_api_key\": \"\",\n    \"omdb_api_key\": \"\",\n    \"enrichment_enabled\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         }
                     }
                 }
@@ -853,6 +2285,7 @@
         },
         {
             "name": "Sources (Public)",
+            "description": "",
             "item": [
                 {
                     "name": "List Active Sources",
@@ -889,19 +2322,24 @@
                                 "value": "application/json"
                             }
                         ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"isp_name\": \"Amber IT\",\n    \"sources\": [\n        { \"source_id\": 1, \"is_reachable\": true, \"response_time_ms\": 45 },\n        { \"source_id\": 2, \"is_reachable\": false, \"response_time_ms\": null }\n    ]\n}"
-                        },
                         "url": {
-                            "raw": "{{base_url}}/sources/health-report",
+                            "raw": "{{base_url}}/sources/health",
                             "host": [
                                 "{{base_url}}"
                             ],
                             "path": [
                                 "sources",
-                                "health-report"
+                                "health"
                             ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"source_id\": 1,\n    \"latency_ms\": 120,\n    \"is_reachable\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         }
                     }
                 },
@@ -919,10 +2357,6 @@
                                 "value": "application/json"
                             }
                         ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"source_id\": 1,\n    \"files\": [\n        {\n            \"path\": \"/movies/Inception.2010.mp4\",\n            \"filename\": \"Inception.2010.mp4\",\n            \"extension\": \"mp4\",\n            \"size\": 104857600\n        },\n        {\n            \"path\": \"/movies/Inception.2010.srt\",\n            \"filename\": \"Inception.2010.srt\",\n            \"extension\": \"srt\",\n            \"size\": 51200\n        }\n    ]\n}"
-                        },
                         "url": {
                             "raw": "{{base_url}}/sources/1/scan-results",
                             "host": [
@@ -933,834 +2367,15 @@
                                 "1",
                                 "scan-results"
                             ]
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Admin",
-            "item": [
-                {
-                    "name": "Dashboard",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/dashboard",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "dashboard"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "List Sources",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/sources",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "sources"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Create Source",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
+                        },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"name\": \"Dflix\",\n    \"base_url\": \"https://movies.discoveryftp.net\",\n    \"scraper_type\": \"dflix\",\n    \"config\": { \"timeout\": 30 },\n    \"priority\": 1\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/admin/sources",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "sources"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "View Source Detail",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/sources/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "sources",
-                                "1"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Update Source",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"name\": \"Dflix Updated\",\n    \"is_active\": true\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/admin/sources/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "sources",
-                                "1"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Delete Source",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/sources/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "sources",
-                                "1"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Test Source Connection",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/sources/1/test",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "sources",
-                                "1",
-                                "test"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Trigger Scan",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/sources/1/scan",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "sources",
-                                "1",
-                                "scan"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "List Content (Admin)",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/contents?search=batman&status=completed",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "contents"
-                            ],
-                            "query": [
-                                {
-                                    "key": "search",
-                                    "value": "batman"
-                                },
-                                {
-                                    "key": "status",
-                                    "value": "completed"
+                            "raw": "{\n    \"files\": [\n        {\n            \"path\": \"/Movies/Inception.2010.mkv\",\n            \"filename\": \"Inception.2010.mkv\",\n            \"extension\": \"mkv\",\n            \"size\": 524288000\n        }\n    ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
                                 }
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Update Content Flags",
-                    "request": {
-                        "method": "PATCH",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
                             }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"is_featured\": true,\n    \"is_published\": true\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/admin/contents/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "contents",
-                                "1"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Delete Content",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/contents/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "contents",
-                                "1"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Force Re-sync Metadata",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/contents/1/resync",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "contents",
-                                "1",
-                                "resync"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Review Queue",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/review-queue",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "review-queue"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Approve Content",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/review-queue/1/approve",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "review-queue",
-                                "1",
-                                "approve"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Correct Content TMDb ID",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"tmdb_id\": 155\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/admin/review-queue/1/correct",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "review-queue",
-                                "1",
-                                "correct"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Reject Content",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/review-queue/1/reject",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "review-queue",
-                                "1",
-                                "reject"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "List Users",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/users",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "users"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Ban User",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/users/1/ban",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "users",
-                                "1",
-                                "ban"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Unban User",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/users/1/unban",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "users",
-                                "1",
-                                "unban"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Reset User Password",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/users/1/reset-password",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "users",
-                                "1",
-                                "reset-password"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Enrichment Status",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/enrichment",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "enrichment"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Pause Enrichment",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/enrichment/pause",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "enrichment",
-                                "pause"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Resume Enrichment",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/enrichment/resume",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "enrichment",
-                                "resume"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "View Settings",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/settings",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "settings"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Update Settings",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{admin_token}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"settings\": [\n        { \"key\": \"site_name\", \"value\": \"Flixarion\" },\n        { \"key\": \"scan_interval\", \"value\": \"6\" }\n    ]\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/admin/settings",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "settings"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Get Enrichment Status",
-                    "request": {
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{admin_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        },
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/enrichment",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "enrichment"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Pause Enrichment",
-                    "request": {
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{admin_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        },
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/enrichment/pause",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "enrichment",
-                                "pause"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Resume Enrichment",
-                    "request": {
-                        "auth": {
-                            "type": "bearer",
-                            "bearer": [
-                                {
-                                    "key": "token",
-                                    "value": "{{admin_token}}",
-                                    "type": "string"
-                                }
-                            ]
-                        },
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/enrichment/resume",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "enrichment",
-                                "resume"
-                            ]
                         }
                     }
                 }

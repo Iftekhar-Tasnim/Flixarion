@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             GenreSeeder::class,
             SampleContentSeeder::class,
+            SourceSeeder::class,
         ]);
     }
 }

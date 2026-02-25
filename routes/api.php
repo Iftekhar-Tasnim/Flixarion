@@ -74,6 +74,8 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
         Route::get('/{id}', [AdminSourceController::class, 'show'])->where('id', '[0-9]+');
         Route::put('/{id}', [AdminSourceController::class, 'update'])->where('id', '[0-9]+');
         Route::delete('/{id}', [AdminSourceController::class, 'destroy'])->where('id', '[0-9]+');
+        Route::get('/test-all', [AdminSourceController::class, 'testAllConnections']);
+        Route::post('/scan-all', [AdminSourceController::class, 'scanAll']);
         Route::post('/{id}/test', [AdminSourceController::class, 'testConnection'])->where('id', '[0-9]+');
         Route::post('/{id}/scan', [AdminSourceController::class, 'triggerScan'])->where('id', '[0-9]+');
     });
@@ -107,6 +109,8 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
         Route::get('/', [EnrichmentController::class, 'status']);
         Route::post('/pause', [EnrichmentController::class, 'pause']);
         Route::post('/resume', [EnrichmentController::class, 'resume']);
+        Route::post('/retry-pending', [EnrichmentController::class, 'retryPending']);
+        Route::post('/retry-unmatched', [EnrichmentController::class, 'retryUnmatched']);
     });
 
     // Settings

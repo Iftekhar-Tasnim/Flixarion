@@ -190,3 +190,16 @@
 
 ---
 
+## Epic: Frontend Client-Side Scanner (Phase 5)
+
+> **Context:** The backend cannot reach BDIX FTPs when hosted on cloud. The browser (on a BDIX ISP) crawls the servers and POSTs results to the backend. Backend API is fully ready. These stories belong to the **Frontend** repository.
+
+| # | Story | Priority | SRS Ref | Acceptance Criteria | Labels |
+|---|-------|----------|---------|-------------------|--------|
+| 82 | As the backend, I want to expose `GET /api/proxy?url=` so that the browser can fetch BDIX directory listings without CORS restrictions | **Critical** | BR-06.12 | Given a `?url=` pointing to a registered BDIX source, backend fetches it server-side and returns raw HTML/JSON. URL is whitelisted against known source base_urls. Returns 403 if URL not in source list. No auth required. | backend, cors, scanner, **pending** |
+| 83 | As the frontend, I want to perform a Race Strategy ping to all BDIX sources on app load so that reachable servers are identified | **Critical** | BR-06.1, BR-06.2 | Given app load, fetches source list from `GET /api/sources`, pings all simultaneously with 3s timeout, stores results in localStorage for 30 min, POSTs health report to `POST /api/sources/health`. | frontend, scanner, **pending** |
+| 84 | As the frontend, I want to crawl accessible BDIX directories via the CORS proxy so that file lists are collected from the user's BDIX connection | **Critical** | BR-06.11, BR-06.12 | Given a reachable source, calls `GET /api/proxy?url=` to fetch h5ai/autoindex HTML, parses video links recursively up to 3 levels, max 200 files/source. Runs silently in background without blocking UI. | frontend, scanner, **pending** |
+| 85 | As the frontend, I want to POST crawled file lists to `POST /api/sources/{id}/scan-results` so that discovered files get enriched and appear in the content library | **Critical** | BR-06.11 | Given collected files, POSTs `{files:[{path,filename,extension}]}` to backend with no auth. Backend deduplicates and dispatches EnrichBatchJob. Frontend receives 202 response. | frontend, scanner, **pending** |
+
+---
+

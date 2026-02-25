@@ -229,12 +229,15 @@ This is a solo community-service and portfolio project with no monetization plan
 | BR-06.2 | Sources that respond within a strict timeout (1.5 seconds) shall be marked as "Online/Peered"; those that timeout or fail shall be marked as "Unreachable" | Must Have |
 | BR-06.3 | The UI shall automatically hide or deprioritize content that only exists on unreachable sources | Must Have |
 | BR-06.4 | For content available on multiple sources, the system shall prioritize the fastest-responding source based on ping results | Must Have |
-| BR-06.5 | Source availability status shall be cached in the browser for the session duration to avoid repeated checks | Must Have |
+| BR-06.5 | Source availability status shall be cached in the browser (localStorage) for 30 minutes to avoid repeated checks | Must Have |
 | BR-06.6 | After performing source reachability checks, the browser shall send an anonymous report to the backend with: user's ISP (detected or self-reported), source IDs, and reachability status | Must Have |
 | BR-06.7 | The backend shall aggregate reachability reports from all users to build a consensus view of source health | Must Have |
 | BR-06.8 | Users shall be able to manually re-test source accessibility at any time, triggering a fresh "Race Strategy" check | Should Have |
 | BR-06.9 | Users shall be able to view which sources are currently reachable from their network | Should Have |
 | BR-06.10 | Users shall be able to manually override and set a preferred source for playback | Should Have |
+| BR-06.11 | The browser shall crawl accessible BDIX source directory listings (h5ai, Emby API, or autoindex) and POST discovered file lists to `POST /api/sources/{id}/scan-results` on the backend | Must Have |
+| BR-06.12 | Because BDIX FTP servers do not send CORS headers, the backend shall expose a `GET /api/proxy?url=` endpoint that fetches a given BDIX URL server-side and returns the HTML/JSON, enabling the browser to read directory listings without CORS restrictions | Critical |
+
 
 ### BR-07: Administration (Crowdsourced Health Monitoring)
 
