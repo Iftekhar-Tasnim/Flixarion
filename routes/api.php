@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ContentController;
+use App\Http\Controllers\ProxyController;
 use App\Http\Controllers\ScanResultController;
 use App\Http\Controllers\SourceHealthController;
 use App\Http\Controllers\UserLibraryController;
@@ -38,9 +39,15 @@ Route::prefix('contents')->group(function () {
     Route::get('/{id}', [ContentController::class, 'show'])->where('id', '[0-9]+');
 });
 
+// ── CORS Proxy (Public — Story #82, BR-06.12) ──
+// Fetches BDIX source URLs server-side so the browser can read directory listings
+// without CORS restrictions. Whitelisted to registered source base_urls only.
+Route::get('/proxy', [ProxyController::class, 'fetch']);
+
 // ── Sources (Public — for Race Strategy + Client Scan) ──
 Route::prefix('sources')->group(function () {
     Route::get('/', [SourceHealthController::class, 'index']);
+    Route::get('/{id}/ping', [SourceHealthController::class, 'ping'])->where('id', '[0-9]+');
     Route::post('/health-report', [SourceHealthController::class, 'store']);
     Route::post('/{id}/scan-results', [ScanResultController::class, 'store'])->where('id', '[0-9]+');
 });

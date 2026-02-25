@@ -14,12 +14,16 @@ class ContentController extends Controller
     /**
      * Browse paginated content list with filters and sorting.
      * Stories #5, #6, #8, #10
+     *
+     * Default: shows ALL published content (no FTP filter).
+     * Optional: ?sources=1,3,7 → filter to only content reachable on those sources.
+     * Optional: ?only_available=true → same as above but simpler toggle for frontend.
      */
     public function index(Request $request): JsonResponse
     {
         $query = Content::query()
             ->published()
-            ->with('genres');
+            ->with(['genres', 'sourceLinks' => fn($q) => $q->active()->select('id', 'linkable_id', 'linkable_type', 'source_id', 'quality', 'status')]);
 
         // ── Filters (Story #6) ──
         if ($request->filled('type')) {
@@ -36,10 +40,16 @@ class ContentController extends Controller
             $query->where('year', $request->input('year'));
         }
 
-        // ── Filter by reachable sources (Story #10 — personalized) ──
-        // Frontend Race Strategy pings all sources, sends reachable IDs: ?sources=1,3,7
+        // ── Filter by reachable sources (Story #10 — opt-in, NOT default) ──
+        // Frontend sends reachable source IDs from Race Strategy: ?sources=1,3,7
+        // OR uses ?only_available=true with ?sources= to filter unavailable content
+        $sourceIds = null;
         if ($request->filled('sources')) {
             $sourceIds = array_map('intval', explode(',', $request->input('sources')));
+        }
+
+        if ($sourceIds && $request->boolean('only_available')) {
+            // Hard filter: hide content not on any reachable source
             $query->whereHas('sourceLinks', function ($q) use ($sourceIds) {
                 $q->where('status', 'active')
                     ->whereIn('source_id', $sourceIds);
@@ -59,13 +69,32 @@ class ContentController extends Controller
         $perPage = min((int) $request->input('per_page', 20), 50);
         $contents = $query->paginate($perPage);
 
+        // ── Annotate each item with source availability info ──
+        // Frontend uses source_ids to mark content as reachable/unavailable
+        // without hiding it — users can still see what's there but not accessible
+        $items = collect($contents->items())->map(function ($content) use ($sourceIds) {
+            $contentSourceIds = $content->sourceLinks->pluck('source_id')->unique()->values()->toArray();
+            $data = $content->toArray();
+            $data['source_ids'] = $contentSourceIds;
+            $data['has_any_source'] = !empty($contentSourceIds);
+
+            // If frontend sent reachable source IDs, mark whether this content is reachable
+            if ($sourceIds !== null) {
+                $data['is_reachable'] = !empty(array_intersect($contentSourceIds, $sourceIds));
+            }
+
+            unset($data['source_links']); // already abstracted into source_ids
+            return $data;
+        });
+
         return $this->successResponse(
-            $contents->items(),
+            $items,
             [
                 'current_page' => $contents->currentPage(),
                 'per_page' => $contents->perPage(),
                 'total' => $contents->total(),
                 'last_page' => $contents->lastPage(),
+                'filter_mode' => ($sourceIds && $request->boolean('only_available')) ? 'available_only' : 'all',
             ]
         );
     }
@@ -121,8 +150,8 @@ class ContentController extends Controller
             ->published()
             ->with([
                 'genres',
-                'sourceLinks' => fn($q) => $q->active()->with('source'),
-                'seasons.episodes.sourceLinks' => fn($q) => $q->active()->with('source'),
+                'sourceLinks' => fn($q) => $q->active()->with('source:id,name,base_url,scraper_type,priority'),
+                'seasons.episodes.sourceLinks' => fn($q) => $q->active()->with('source:id,name,base_url,scraper_type,priority'),
             ])
             ->find($id);
 
@@ -133,3 +162,4 @@ class ContentController extends Controller
         return $this->successResponse($content);
     }
 }
+

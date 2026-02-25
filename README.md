@@ -1,59 +1,240 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Flixarion — Backend API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+> Free BDIX streaming platform for Bangladesh. Aggregates content from BDIX FTP servers, enriches with TMDb metadata, and serves a clean REST API for the frontend.
 
-## About Laravel
+**Stack:** Laravel 12 · PostgreSQL · Redis · Laravel Sanctum · Laravel Queues
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## What This Repo Is
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+This is the **Laravel backend API only**. It handles:
+- Content discovery and aggregation from 8 BDIX FTP sources
+- Metadata enrichment via TMDb + OMDb
+- User auth, library (watchlist/favorites/history)
+- Admin panel API (sources, content, enrichment, users)
+- CORS proxy for frontend BDIX directory scanning
 
-## Learning Laravel
+The **frontend** (Next.js) and **admin panel** are separate repositories.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Architecture
 
-## Laravel Sponsors
+```
+BDIX FTP Servers                    Flixarion Backend (this repo)
+┌─────────────────┐    Client-side  ┌──────────────────────────────┐
+│ DhakaFlix       │◄── browser ────►│ POST /sources/{id}/scan-results│
+│ Dflix           │    scans        │ GET  /proxy?url=              │
+│ RoarZone        │                 ├──────────────────────────────┤
+│ FTPBD           │                 │ Shadow Table (pending)        │
+│ CircleFTP       │                 │ → EnrichBatchJob              │
+│ ICC FTP         │                 │ → TMDb / OMDb API             │
+│ iHub            │                 │ → Contents Table              │
+└─────────────────┘                 └──────────────────────────────┘
+                                              ↑
+                                    Frontend reads via REST API
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Key insight: **The backend never scrapes BDIX directly when hosted on cloud** — the user's browser (already on BDIX) crawls and POSTs file lists. The backend enriches via TMDb (accessible from anywhere).
 
-### Premium Partners
+---
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Getting Started
 
-## Contributing
+### Requirements
+- PHP 8.2+
+- PostgreSQL 14+
+- Redis
+- Composer
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Setup
 
-## Code of Conduct
+```bash
+git clone https://github.com/your-username/flixarion.git
+cd flixarion
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+composer install
 
-## Security Vulnerabilities
+cp .env.example .env
+php artisan key:generate
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Configure `.env`
+
+```env
+APP_NAME=Flixarion
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=flixarion
+DB_USERNAME=postgres
+DB_PASSWORD=secret
+
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+
+QUEUE_CONNECTION=redis
+
+TMDB_API_KEY=your_tmdb_api_key_here
+OMDB_API_KEY=your_omdb_api_key_here
+
+SANCTUM_STATEFUL_DOMAINS=localhost:3000
+FRONTEND_URL=http://localhost:3000
+```
+
+### Run
+
+```bash
+php artisan migrate --seed    # creates tables + seeds 8 BDIX sources
+php artisan serve             # API on http://localhost:8000
+
+# In a separate terminal — run the queue worker (required for enrichment)
+php artisan queue:work
+```
+
+---
+
+## API Overview
+
+Base URL: `http://localhost:8000/api`
+
+All responses: `{ "data": ..., "meta": ... }` or `{ "message": "...", "errors": {} }`
+
+### Public Endpoints (no auth)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/auth/register` | Register |
+| POST | `/auth/login` | Login → token |
+| GET | `/contents` | Browse all content |
+| GET | `/contents/search?q=` | Search |
+| GET | `/contents/{id}` | Content detail + source links |
+| GET | `/proxy?url=` | CORS proxy for BDIX URLs |
+| GET | `/sources` | List all BDIX sources |
+| GET | `/sources/{id}/ping` | Test FTP reachability |
+| POST | `/sources/health-report` | Report Race Strategy results |
+| POST | `/sources/{id}/scan-results` | Push crawled file list |
+
+### Authenticated (Bearer token)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/auth/me` | Current user |
+| POST | `/auth/logout` | Logout |
+| GET | `/user/library` | Full library |
+| POST/DELETE | `/user/watchlist` | Manage watchlist |
+| POST/DELETE | `/user/favorites` | Manage favorites |
+| GET/POST | `/user/history` | Watch history |
+
+### Admin (admin role required)
+
+`/admin/dashboard`, `/admin/sources`, `/admin/contents`, `/admin/enrichment`, `/admin/review-queue`, `/admin/users`, `/admin/settings`
+
+→ Full API docs: [`docs/api_reference.md`](docs/api_reference.md)
+
+---
+
+## Content Pipeline
+
+```
+1. Scan      → Browser crawls BDIX FTP → POST /sources/{id}/scan-results
+                OR Admin triggers: POST /admin/sources/{id}/scan
+
+2. Shadow    → Files saved to shadow_content_sources (status: pending)
+
+3. Enrich    → EnrichBatchJob runs via queue:
+               FilenameParser → TMDb search → confidence score
+               ≥80%: published to contents table
+               <80%: admin review queue
+
+4. Serve     → Frontend reads GET /contents
+```
+
+---
+
+## Scrapers
+
+8 BDIX source scrapers in `app/Scrapers/`:
+
+| Scraper | Method |
+|---|---|
+| `DflixScraper` | HTTP + HTML parsing |
+| `DhakaFlixMovieScraper` | h5ai recursive directory walk |
+| `DhakaFlixSeriesScraper` | h5ai recursive directory walk |
+| `RoarZoneScraper` | Emby API (`api_key` from `source.config`) |
+| `FtpbdScraper` | Emby API |
+| `CircleFtpScraper` | Node.js REST API multi-endpoint probe |
+| `IccFtpScraper` | Auto-detect: h5ai / Emby / Apache autoindex |
+| `IhubScraper` | HTML portal scraping |
+
+---
+
+## Key Directories
+
+```
+app/
+├── Http/Controllers/       # Public API controllers
+│   └── Admin/              # Admin API controllers
+├── Jobs/                   # ScanSourceJob, EnrichBatchJob
+├── Models/                 # Eloquent models
+├── Scrapers/               # BDIX source scrapers
+├── Services/               # ContentEnricher, FilenameParser, TmdbService
+└── Traits/                 # ApiResponse trait
+
+docs/
+├── api_reference.md        # Complete frontend API docs
+├── frontend_scanner_plan.md# Client-side scanner implementation guide
+├── BRD.md                  # Business requirements
+├── SRS.md                  # Software requirements
+├── progress.md             # Story completion tracker (66/89 done)
+└── Flixarion.postman_collection.json
+```
+
+---
+
+## Admin Controls
+
+| Action | Endpoint |
+|---|---|
+| Test all source connections | `GET /admin/sources/test-all` |
+| Scan all active sources | `POST /admin/sources/scan-all` |
+| Pause enrichment worker | `POST /admin/enrichment/pause` |
+| Resume enrichment worker | `POST /admin/enrichment/resume` |
+| Retry all pending records | `POST /admin/enrichment/retry-pending` |
+| Retry all unmatched records | `POST /admin/enrichment/retry-unmatched` |
+| Enrichment status + counts | `GET /admin/enrichment` |
+
+---
+
+## Project Status
+
+**Backend: 66/89 stories complete — production ready**
+
+| Epic | Status |
+|---|---|
+| Auth & User Management | ✅ Complete |
+| Content Browsing & Search | ✅ Complete |
+| User Library | ✅ Complete |
+| ISP Source Availability | ✅ Complete |
+| Content Scanning (Phase 1 + 2) | ✅ Complete |
+| Source Scrapers (8 sources) | ✅ Complete |
+| Admin Panel API | ✅ Complete |
+| CORS Proxy (for frontend scanner) | ✅ Complete |
+| Frontend (separate repo) | 🔧 Next phase |
+| Deployment | ⬜ Pending |
+
+---
+
+## Postman Collection
+
+Import [`docs/Flixarion.postman_collection.json`](docs/Flixarion.postman_collection.json) for all pre-configured requests. Set `base_url` and `admin_token` variables in your environment.
+
+---
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT — Solo portfolio project by [Iftekhar Tasnim](https://github.com/Iftekhar-Tasnim).  
+Content is streamed directly from publicly accessible BDIX FTP servers — Flixarion does not host any media.

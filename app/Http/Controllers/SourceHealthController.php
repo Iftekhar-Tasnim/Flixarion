@@ -7,23 +7,56 @@ use App\Models\SourceHealthReport;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class SourceHealthController extends Controller
 {
     use ApiResponse;
 
     /**
-     * List all sources (public, for frontend Race Strategy ping targets).
+     * List all active sources (public, for frontend Race Strategy ping targets).
      */
     public function index(): JsonResponse
     {
         $sources = Source::query()
             ->active()
-            ->select('id', 'name', 'base_url', 'health_score', 'priority')
+            ->select('id', 'name', 'base_url', 'scraper_type', 'health_score', 'priority')
             ->orderBy('priority')
             ->get();
 
         return $this->successResponse($sources);
+    }
+
+    /**
+     * Test reachability of a specific source (public — no auth required).
+     * Frontend uses this to show a "Test Connection" button per source.
+     *
+     * Returns: { source_id, name, reachable, latency_ms }
+     */
+    public function ping(int $id): JsonResponse
+    {
+        $source = Source::active()->select('id', 'name', 'base_url')->find($id);
+
+        if (!$source) {
+            return $this->errorResponse('Source not found.', status: 404);
+        }
+
+        $start = microtime(true);
+        try {
+            $response = Http::timeout(5)->head($source->base_url);
+            $latencyMs = (int) ((microtime(true) - $start) * 1000);
+            $reachable = $response->status() > 0;
+        } catch (\Exception $e) {
+            $latencyMs = (int) ((microtime(true) - $start) * 1000);
+            $reachable = false;
+        }
+
+        return $this->successResponse([
+            'source_id' => $source->id,
+            'name' => $source->name,
+            'reachable' => $reachable,
+            'latency_ms' => $latencyMs,
+        ]);
     }
 
     /**

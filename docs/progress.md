@@ -24,14 +24,20 @@
 ## Epic: Content Browsing & Search — 7/7 ✅
 
 | # | Story | Priority | Status |
-|---|-------|----------|--------|
+|---|-------|----------|---------|
 | 5 | Paginated content list (20/page) | Critical | ✅ |
 | 6 | Filter by type, genre, year | High | ✅ |
 | 7 | Search by title + alternative titles | Critical | ✅ |
 | 8 | Trending, popular, recently added endpoints | High | ✅ |
-| 9 | Content detail with metadata + sources | Critical | ✅ |
+| 9 | Content detail with metadata + sources (now includes `name`, `base_url`, `scraper_type` per source) | Critical | ✅ |
 | 10 | Filter by user's accessible sources | Moderate | ✅ |
 | 11 | robots.txt blocks /play/ and /source/ | High | ✅ |
+
+> ✅ **Updated (2026-02-25):** Default browse (`GET /api/contents`) now shows **ALL content** — no FTP filter applied.
+> - Each item includes `source_ids[]`, `has_any_source`, and (when `?sources=` sent) `is_reachable` boolean
+> - Frontend uses these to **gray out** unavailable content without hiding it
+> - Add `?only_available=true` together with `?sources=1,3` to hard-filter to reachable content only
+> - `filter_mode` in meta indicates `all` vs `available_only`
 
 ---
 
@@ -57,12 +63,16 @@
 
 ---
 
-## Epic: ISP Source Availability — 2/2 ✅
+## Epic: ISP Source Availability — 3/3 ✅
 
 | # | Story | Priority | Status |
-|---|-------|----------|--------|
+|---|-------|----------|---------|
 | 20 | Anonymous health reports endpoint | High | ✅ |
 | 21 | Aggregate crowdsourced health | High | ✅ |
+| — | Public FTP ping `GET /api/sources/{id}/ping` — user-facing connection test | High | ✅ |
+
+> ✅ **New (2026-02-25):** `GET /api/sources/{id}/ping` — public, no auth. Backend pings the FTP server and returns `{ reachable, latency_ms }`. Frontend shows a "Test Connection" button per source.
+> ✅ `GET /api/sources` now returns `scraper_type` so the frontend knows which crawler to use per source.
 
 ---
 
@@ -223,25 +233,26 @@
 | Status | Count |
 |--------|-------|
 | ✅ Done | **63** |
-| ⬜ Not Started | **20** |
+| ✅ Done | **64** |
+| ⬜ Not Started | **19** |
 | **Total** | **83** |
 
 ---
 
-## Epic: Frontend Client-Side Scanner — 0/5 ⬜ *(Phase 5)*
+## Epic: Frontend Client-Side Scanner — 1/5 🔧 *(Phase 5)*
 
-> **Context:** The backend cannot reach BDIX FTPs when hosted on cloud. The user's browser (already on BDIX) crawls the servers and pushes file lists to the backend.  
-> Backend is **100% ready**. All stories below belong to the **Frontend** repository.
+> **Context:** The backend cannot reach BDIX FTPs when hosted on cloud. The user's browser (already on BDIX) crawls the servers and pushes file lists to the backend.
+> Backend is **100% ready**. All stories below except #82 belong to the **Frontend** repository.
 
 | # | Story | Priority | Status |
-|---|-------|----------|--------|
-| 82 | Backend CORS proxy `GET /api/proxy?url=` — whitelisted BDIX URL fetcher | **Critical** | ⬜ |
+|---|-------|----------|---------|
+| 82 | Backend CORS proxy `GET /api/proxy?url=` — whitelisted BDIX URL fetcher | **Critical** | ✅ |
 | 83 | Frontend: Race Strategy — ping all sources on app load, cache for 30 min | **Critical** | ⬜ |
 | 84 | Frontend: Crawl accessible BDIX directories via proxy, parse video links recursively | **Critical** | ⬜ |
 | 85 | Frontend: POST crawled file list to `POST /api/sources/{id}/scan-results` | **Critical** | ⬜ |
 | — | Frontend: Scraper modules per source type (h5ai, Emby, Dflix HTML, CircleFTP) | **Critical** | ⬜ |
 
-> **Implementation guide:** `docs/frontend_scanner_plan.md`  
+> **Implementation guide:** `docs/frontend_scanner_plan.md`
 > **Why CORS proxy (story #82) is on the backend:** It's the only story in this epic that lives in this Laravel repo. All others are frontend code.
 
 ---
@@ -250,9 +261,9 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ Done | **63** |
-| ⬜ Not Started | **25** |
-| **Total** | **88** |
+| ✅ Done | **66** |
+| ⬜ Not Started | **23** |
+| **Total** | **89** |
 
 ---
 
